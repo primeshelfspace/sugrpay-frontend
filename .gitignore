@@ -1,0 +1,32 @@
+node_modules/
+# Turborepo task cache
+.turbo/
+dist/
+build/
+.next/
+# Deploy build slots — see deploy/deploy.sh.
+.next-a/
+.next-b/
+.next-slot
+out/
+coverage/
+*.tsbuildinfo
+
+.env
+.env.local
+.env.*.local
+!.env.example
+
+.DS_Store
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+
+# Playwright
+test-results/
+playwright-report/
+blob-report/
+
+# Local Claude Code session config — machine-specific, not project source.
+.claude/

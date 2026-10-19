@@ -1,0 +1,24 @@
+packages:
+  - 'apps/*'
+  - 'packages/*'
+
+# One node_modules, at the repository root: every app and package resolves
+# its libraries from there (no per-workspace node_modules folders).
+#
+# A flat tree lets code import a library its own package.json never declared.
+# The payment app's dependency list is a PCI scope question, so
+# `pnpm check:deps` (scripts/check-deps.mjs) fails if any app or package
+# imports something it does not declare.
+nodeLinker: hoisted
+
+strictPeerDependencies: false
+autoInstallPeers: true
+enablePrePostScripts: true
+
+# Build scripts are opt-in (pnpm >= 10). Each entry is a deliberate decision:
+# a package that runs code at install time is a supply-chain surface.
+allowBuilds:
+  esbuild: true # vitest and next bundling
+  sharp: true # next/image optimisation
+  '@tailwindcss/oxide': true
+  unrs-resolver: true

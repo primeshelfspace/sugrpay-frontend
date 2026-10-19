@@ -1,0 +1,18 @@
+# Requiring a named reviewer on the paths where a mistake is most expensive.
+
+# Default
+*                                          @sugrpay/engineering
+
+# Money.
+/packages/kernel/src/money/                @sugrpay/engineering-leads @sugrpay/security
+
+# Sign-in and the shared session cookie.
+/packages/platform-contracts/src/session.ts @sugrpay/engineering-leads @sugrpay/security
+/apps/accounts/src/lib/session.ts          @sugrpay/engineering-leads @sugrpay/security
+/apps/accounts/src/middleware.ts           @sugrpay/engineering-leads @sugrpay/security
+/apps/invoicing/src/middleware.ts          @sugrpay/engineering-leads @sugrpay/security
+
+# The public payment application. Every dependency change here is a PCI scope
+# question, so the dependency manifest gets the same treatment as the code.
+/apps/payment/                             @sugrpay/engineering-leads @sugrpay/security
+/apps/payment/package.json                 @sugrpay/engineering-leads @sugrpay/security
