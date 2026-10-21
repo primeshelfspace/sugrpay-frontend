@@ -18,7 +18,7 @@ function nextDistDir(app) {
   }
 }
 
-// Each app's own "start" script (with-env.mjs -> next start) loads this
+// The app's "start" script (with-env.mjs -> next start) loads this
 // repository's root .env; pm2 just invokes it as-is.
 const webApp = (name) => ({
   name,
@@ -29,5 +29,5 @@ const webApp = (name) => ({
 });
 
 module.exports = {
-  apps: [webApp('accounts'), webApp('invoicing'), webApp('payment')],
+  apps: [webApp('sugrpay')],
 };

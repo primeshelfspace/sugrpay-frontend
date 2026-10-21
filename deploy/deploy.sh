@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Builds the current checkout of the web apps on the staging box and switches
+# Builds the current checkout of the Sugrpay web app on the staging box and switches
 # pm2 over to it without taking the live apps down. Manual deploy:
 #
 #   cd ~/sugrpay-frontend && git pull && bash deploy/deploy.sh
@@ -13,9 +13,9 @@
 # missing files or crashed the process, and nginx answered 502; a build that
 # failed halfway left the box with no usable build at all.
 #
-# Instead every app builds into its idle slot (.next-a or .next-b, recorded in
+# Instead the app builds into its idle slot (.next-a or .next-b, recorded in
 # apps/<app>/.next-slot, which deploy/ecosystem.config.cjs hands to next
-# start), and nothing live is touched until ALL of them have built. A failed
+# start), and nothing live is touched until it has built. A failed
 # build exits here with the old version still serving.
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -24,7 +24,7 @@ pnpm install --frozen-lockfile
 pnpm --filter "./packages/*" build
 
 declare -A slot
-for app in accounts invoicing payment; do
+for app in sugrpay; do
   dir="apps/$app"
   live=$(cat "$dir/.next-slot" 2>/dev/null || echo .next)
   if [ "$live" = .next-a ]; then slot[$app]=.next-b; else slot[$app]=.next-a; fi
@@ -39,15 +39,15 @@ done
 
 # next build rewrites these to point at the slot it built into; keep the
 # tracked copies clean so the next `git reset --hard` / `git pull` is quiet.
-git checkout -- apps/accounts/next-env.d.ts apps/invoicing/next-env.d.ts apps/payment/next-env.d.ts
+git checkout -- apps/sugrpay/next-env.d.ts
 
 # --- everything built: go live ---
-for app in accounts invoicing payment; do echo "${slot[$app]}" > "apps/$app/.next-slot"; done
+for app in sugrpay; do echo "${slot[$app]}" > "apps/$app/.next-slot"; done
 
 pm2 startOrReload deploy/ecosystem.config.cjs --update-env
 pm2 save
 
 # The pre-slot build is unused once every app is on a slot.
-rm -rf apps/accounts/.next apps/invoicing/.next apps/payment/.next
+rm -rf apps/sugrpay/.next
 
 pm2 status

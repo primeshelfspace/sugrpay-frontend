@@ -2,7 +2,7 @@
 
 | Package               | Owned here? | What it is                                                    |
 | --------------------- | ----------- | ------------------------------------------------------------- |
-| `ui`                  | **yes**     | React components shared by the apps (toasts, pagination)      |
+| `ui`                  | **yes**     | React components (toasts, pagination)                         |
 | `kernel`              | copy        | Money, validation, design tokens, the role/permission matrix  |
 | `platform-contracts`  | copy        | Request schemas, roles, products, the session-cookie contract |
 | `invoicing-contracts` | copy        | Invoice schemas, statuses, email and PDF renderers            |

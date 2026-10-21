@@ -8,11 +8,13 @@
 
 # Sign-in and the shared session cookie.
 /packages/platform-contracts/src/session.ts @sugrpay/engineering-leads @sugrpay/security
-/apps/accounts/src/lib/session.ts          @sugrpay/engineering-leads @sugrpay/security
-/apps/accounts/src/middleware.ts           @sugrpay/engineering-leads @sugrpay/security
-/apps/invoicing/src/middleware.ts          @sugrpay/engineering-leads @sugrpay/security
+/apps/sugrpay/src/accounts/lib/session.ts   @sugrpay/engineering-leads @sugrpay/security
+/apps/sugrpay/src/lib/session.ts            @sugrpay/engineering-leads @sugrpay/security
+/apps/sugrpay/src/middleware.ts             @sugrpay/engineering-leads @sugrpay/security
+/apps/sugrpay/src/accounts/middleware.ts    @sugrpay/engineering-leads @sugrpay/security
 
-# The public payment application. Every dependency change here is a PCI scope
-# question, so the dependency manifest gets the same treatment as the code.
-/apps/payment/                             @sugrpay/engineering-leads @sugrpay/security
-/apps/payment/package.json                 @sugrpay/engineering-leads @sugrpay/security
+# The public payment pages. Every dependency change is a PCI scope question,
+# so the dependency manifest gets the same treatment as the code.
+/apps/sugrpay/src/app/pay/                  @sugrpay/engineering-leads @sugrpay/security
+/apps/sugrpay/src/pay/                      @sugrpay/engineering-leads @sugrpay/security
+/apps/sugrpay/package.json                  @sugrpay/engineering-leads @sugrpay/security

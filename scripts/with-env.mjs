@@ -21,14 +21,14 @@ loadRootEnv();
  * expands them itself before this process starts — and it expands them against
  * the ambient environment, which does NOT yet contain .env (that is loaded
  * above, inside this process). The token would silently resolve to the
- * default, so `ADMIN_PORT` in .env was ignored on macOS and Linux while
+ * default, so `PORT` in .env was ignored on macOS and Linux while
  * appearing to work.
  *
  * Those same quotes are why this also has to strip a leftover matching pair
  * afterward: a POSIX shell consumes single quotes as its own quoting syntax
  * before this process ever sees the argument, but cmd.exe on Windows has no
  * such syntax and passes them through as literal characters — without this,
- * `'${ADMIN_PORT:-3000}'` expands to the 8-character string `'3000'` there,
+ * `'${PORT:-3000}'` expands to the 8-character string `'3000'` there,
  * which every consumer (next dev --port, etc.) rejects as not a number.
  */
 function expandDefault(arg) {

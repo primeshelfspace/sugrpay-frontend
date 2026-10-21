@@ -43,13 +43,13 @@ export default tseslint.config(
       },
     },
   },
-  // The payment app is public and in PCI scope: it never pulls in the admin
-  // contracts (users, roles, brands management).
+  // The public payment pages (/pay) are in PCI scope: they never pull in the
+  // admin contracts (users, roles, brands management).
   {
-    files: ['apps/payment/**/*.{ts,tsx}'],
+    files: ['apps/sugrpay/src/app/pay/**/*.{ts,tsx}', 'apps/sugrpay/src/pay/**/*.ts'],
     rules: {
       'no-restricted-imports': restrictedPackages([
-        ['@platform/platform-contracts', 'The public payment app does not use admin contracts.'],
+        ['@platform/platform-contracts', 'The public payment pages do not use admin contracts.'],
       ]),
     },
   },

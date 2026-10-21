@@ -39,53 +39,7 @@ importers:
         specifier: 8.18.1
         version: 8.18.1(eslint@9.17.0(jiti@1.21.7))(typescript@5.9.3)
 
-  apps/accounts:
-    dependencies:
-      '@platform/kernel':
-        specifier: workspace:*
-        version: link:../../packages/kernel
-      '@platform/platform-contracts':
-        specifier: workspace:*
-        version: link:../../packages/platform-contracts
-      '@platform/ui':
-        specifier: workspace:*
-        version: link:../../packages/ui
-      lucide-react:
-        specifier: ^0.469.0
-        version: 0.469.0(react@18.3.1)
-      next:
-        specifier: ^15.1.3
-        version: 15.5.28(@types/node@22.20.5)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
-      react:
-        specifier: ^18.3.1
-        version: 18.3.1
-      react-dom:
-        specifier: ^18.3.1
-        version: 18.3.1(react@18.3.1)
-    devDependencies:
-      '@types/node':
-        specifier: ^22.10.2
-        version: 22.20.5
-      '@types/react':
-        specifier: ^18.3.18
-        version: 18.3.31
-      '@types/react-dom':
-        specifier: ^18.3.5
-        version: 18.3.7(@types/react@18.3.31)
-      autoprefixer:
-        specifier: ^10.4.20
-        version: 10.6.1(postcss@8.5.30)
-      postcss:
-        specifier: ^8.4.49
-        version: 8.5.30
-      tailwindcss:
-        specifier: ^3.4.17
-        version: 3.4.19
-      typescript:
-        specifier: ^5.7.2
-        version: 5.9.3
-
-  apps/invoicing:
+  apps/sugrpay:
     dependencies:
       '@platform/invoicing-contracts':
         specifier: workspace:*
@@ -99,6 +53,12 @@ importers:
       '@platform/ui':
         specifier: workspace:*
         version: link:../../packages/ui
+      '@stripe/react-stripe-js':
+        specifier: ^2.9.0
+        version: 2.9.0(@stripe/stripe-js@4.10.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      '@stripe/stripe-js':
+        specifier: ^4.10.0
+        version: 4.10.0
       lucide-react:
         specifier: ^0.469.0
         version: 0.469.0(react@18.3.1)
@@ -114,55 +74,6 @@ importers:
       recharts:
         specifier: ^2.15.0
         version: 2.15.4(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
-    devDependencies:
-      '@types/node':
-        specifier: ^22.10.2
-        version: 22.20.5
-      '@types/react':
-        specifier: ^18.3.18
-        version: 18.3.31
-      '@types/react-dom':
-        specifier: ^18.3.5
-        version: 18.3.7(@types/react@18.3.31)
-      autoprefixer:
-        specifier: ^10.4.20
-        version: 10.6.1(postcss@8.5.30)
-      postcss:
-        specifier: ^8.4.49
-        version: 8.5.30
-      tailwindcss:
-        specifier: ^3.4.17
-        version: 3.4.19
-      typescript:
-        specifier: ^5.7.2
-        version: 5.9.3
-
-  apps/payment:
-    dependencies:
-      '@platform/invoicing-contracts':
-        specifier: workspace:*
-        version: link:../../packages/invoicing-contracts
-      '@platform/kernel':
-        specifier: workspace:*
-        version: link:../../packages/kernel
-      '@platform/ui':
-        specifier: workspace:*
-        version: link:../../packages/ui
-      '@stripe/react-stripe-js':
-        specifier: ^2.9.0
-        version: 2.9.0(@stripe/stripe-js@4.10.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
-      '@stripe/stripe-js':
-        specifier: ^4.10.0
-        version: 4.10.0
-      next:
-        specifier: ^15.1.3
-        version: 15.5.28(@types/node@22.20.5)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
-      react:
-        specifier: ^18.3.1
-        version: 18.3.1
-      react-dom:
-        specifier: ^18.3.1
-        version: 18.3.1(react@18.3.1)
     devDependencies:
       '@types/node':
         specifier: ^22.10.2
