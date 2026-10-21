@@ -16,6 +16,9 @@
 const nextConfig = {
   reactStrictMode: true,
 
+  // One site, one domain: the payment pages live at <site>/pay.
+  basePath: '/pay',
+
   // deploy/deploy.sh builds into the idle slot (.next-a / .next-b) while the
   // live server keeps serving the other, then repoints pm2 (see
   // deploy/ecosystem.config.cjs). Unset locally and in CI, so those still use .next.

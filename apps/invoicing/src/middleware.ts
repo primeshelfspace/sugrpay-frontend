@@ -39,12 +39,17 @@ const APP_URL = process.env.NEXT_PUBLIC_INVOICING_URL || '';
 const matches = (pathname: string, paths: readonly string[]) =>
   paths.some((path) => pathname === path || pathname.startsWith(`${path}/`));
 
+/** An Accounts page by path. Accounts lives under a path of its own
+ * (<site>/accounts), which `new URL('/login', ACCOUNTS_URL)` would drop. */
+const accountsUrl = (pathAndQuery: string) =>
+  new URL(`${ACCOUNTS_URL.replace(/\/+$/, '')}${pathAndQuery}`);
+
 export function middleware(request: NextRequest): NextResponse {
   const { pathname, search } = request.nextUrl;
   const appOrigin = APP_URL || request.nextUrl.origin;
 
   if (matches(pathname, ACCOUNTS_PATHS)) {
-    const target = new URL(`${pathname}${search}`, ACCOUNTS_URL);
+    const target = accountsUrl(`${pathname}${search}`);
     // A return path is relative to this app; make it absolute so Accounts
     // can send the user back here rather than to one of its own pages.
     const next = target.searchParams.get(RETURN_TO_PARAM);
@@ -58,7 +63,7 @@ export function middleware(request: NextRequest): NextResponse {
     return NextResponse.next();
   }
 
-  const login = new URL('/login', ACCOUNTS_URL);
+  const login = accountsUrl('/login');
   login.searchParams.set(RETURN_TO_PARAM, new URL(`${pathname}${search}`, appOrigin).toString());
   return NextResponse.redirect(login);
 }
