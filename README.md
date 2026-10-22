@@ -26,6 +26,11 @@ deploy/                     Amplify guide (amplify.md); server deploy (pm2 + ngi
 scripts/                    env loader, dependency check
 ```
 
+**How it works, in depth:** [docs/architecture.md](docs/architecture.md) — sections, middleware,
+how pages talk to the API, sign-up and onboarding, payment pages, shared packages.
+
+**Live:** https://www.sugrpay.com (AWS Amplify, deploys on every push to `main`).
+
 ## Run it
 
 You need **Node.js 22+** and **pnpm** (`corepack enable`), and the backend
