@@ -366,7 +366,8 @@ interface MethodOption {
  */
 function quotedTotalFor(invoice: PublicInvoice, method: Method): number {
   if (!incursCardFee(method)) return invoice.balanceMinor;
-  const preFee = invoice.subtotalMinor + invoice.taxMinor;
+  // Only the balance is due after a partial payment; the fee is on that alone.
+  const preFee = Math.min(invoice.balanceMinor, invoice.subtotalMinor + invoice.taxMinor);
   return preFee + applyBasisPoints(preFee, invoice.cardFeeRateBp);
 }
 

@@ -12,6 +12,7 @@ import type {
   Role,
 } from '@platform/platform-contracts';
 import { readSessionToken } from './session';
+import { assertSafeApiPath } from '@/lib/request-guards';
 
 const API_URL = process.env['NEXT_PUBLIC_API_URL'] ?? 'http://localhost:4000';
 
@@ -41,6 +42,8 @@ export async function apiFetch<T>(
   const { token, ...requestInit } = init;
   // An explicit token is passed by sign-in, which runs before its cookie exists.
   const sessionToken = token === undefined ? await readSessionToken() : token;
+  // Ids from the browser are part of these paths; see request-guards.ts.
+  assertSafeApiPath(path);
 
   const response = await fetch(`${API_URL}${path}`, {
     ...requestInit,

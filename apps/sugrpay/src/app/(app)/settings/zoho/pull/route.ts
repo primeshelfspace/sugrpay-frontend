@@ -1,12 +1,15 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { API_URL } from '@/lib/api';
+import { isId, isSameOrigin } from '@/lib/request-guards';
 import { readSessionToken } from '@/lib/session';
 
 /** Client-callable proxy for the pull action — same reason as
  * activity/route.ts: the session token is server-only. */
 export async function POST(request: NextRequest): Promise<NextResponse> {
   const brandId = request.nextUrl.searchParams.get('brandId');
-  if (!brandId) return NextResponse.json({ message: 'missing brandId' }, { status: 400 });
+  // Route handlers get no CSRF check from Next.js; refuse other sites.
+  if (!isSameOrigin(request)) return NextResponse.json({ message: 'forbidden' }, { status: 403 });
+  if (!isId(brandId)) return NextResponse.json({ message: 'missing brandId' }, { status: 400 });
 
   const token = await readSessionToken();
   if (!token) return NextResponse.json({ message: 'not signed in' }, { status: 401 });

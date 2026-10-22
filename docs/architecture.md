@@ -172,9 +172,11 @@ variables (§2).
 
 ## 9. Things to know
 
-- **No tests in the app itself** — only in the packages. A first worthwhile
-  addition is a Playwright run through sign-in, invoice creation and the
-  payment page.
+- **Tests in the app** cover the server-side guards (`src/lib/*.test.ts`,
+  vitest). Every user journey is tested end to end against the API in the
+  backend (`apps/api/src/e2e/`). A browser-level Playwright run through
+  sign-in, invoice creation and the payment page is the next addition.
+- Security rules for this app: [security.md](security.md).
 - `/notifications` and parts of the customer drawer are placeholders
   ("coming soon").
 - `src/lib/api.ts` and `src/accounts/lib/api.ts` define their own user types;

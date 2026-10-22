@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { API_URL } from './api';
+import { isId, isProviderConsentUrl } from './request-guards';
 import { LOGIN_PATH, readSessionToken } from './session';
 
 /**
@@ -45,7 +46,7 @@ export async function startProviderConnect(
     return NextResponse.redirect(new URL(`${settingsPath}?${params}`, request.url));
   };
 
-  if (!brandId) return failure('missing_brand', false);
+  if (!isId(brandId)) return failure('missing_brand', false);
 
   const token = await readSessionToken();
   if (!token) return NextResponse.redirect(new URL(LOGIN_PATH, request.url));
@@ -66,15 +67,24 @@ export async function startProviderConnect(
     // No redirect means the API refused rather than handing us a consent URL —
     // most often the provider is not configured on this deployment, which
     // surfaces as a 400 carrying the reason.
-    let reason = 'connect_failed';
-    try {
-      const body = (await upstream.json()) as { message?: string };
-      if (body?.message) reason = body.message;
-    } catch {
-      // Non-JSON body; the generic reason above stands.
-    }
-    return failure(reason);
+    // The reason travels as a fixed code, never the API's own text: the page
+    // that shows it is a trusted one, and its URL must not carry free text.
+    if (upstream.status === 400) return failure('not_configured');
+    if (upstream.status === 401) return NextResponse.redirect(new URL(LOGIN_PATH, request.url));
+    if (upstream.status === 403) return failure('forbidden');
+    return failure('connect_failed');
   }
+
+  // Only ever on to a provider's own consent screen (or the API's local
+  // stand-in for one), whatever the upstream answered.
+  const sameApi = (() => {
+    try {
+      return new URL(location).origin === new URL(API_URL).origin;
+    } catch {
+      return false;
+    }
+  })();
+  if (!isProviderConsentUrl(location) && !sameApi) return failure('connect_failed');
 
   return NextResponse.redirect(location);
 }

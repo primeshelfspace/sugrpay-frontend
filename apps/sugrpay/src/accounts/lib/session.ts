@@ -42,13 +42,17 @@ function cookieDomain(): { domain?: string } {
 }
 
 /**
- * Whether this request arrived over HTTPS, from the TLS proxy's
+ * Whether the cookie must be Secure: always in a production build;
+ * otherwise whether this request arrived over HTTPS, from the TLS proxy's
  * x-forwarded-proto (same reasoning as the invoicing app's session.ts).
  * COOKIE_SECURE overrides it for a setup with no proxy in front.
  */
 async function isSecureRequest(): Promise<boolean> {
   const override = process.env['COOKIE_SECURE'];
   if (override !== undefined) return override === 'true';
+  // A production build is only ever served over HTTPS, and a host's proxy
+  // headers are not something to bet the session cookie on.
+  if (process.env.NODE_ENV === 'production') return true;
   const forwardedProto = (await headers()).get('x-forwarded-proto');
   return forwardedProto?.split(',')[0]?.trim().toLowerCase() === 'https';
 }

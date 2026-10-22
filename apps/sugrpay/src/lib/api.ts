@@ -12,6 +12,7 @@
 import type { InvoiceStatus } from '@platform/invoicing-contracts';
 import type { BusinessType, PermissionGrants, Role } from '@platform/platform-contracts';
 import { readSessionToken } from './session';
+import { assertSafeApiPath } from './request-guards';
 
 const API_URL = process.env['NEXT_PUBLIC_API_URL'] ?? 'http://localhost:4000';
 
@@ -68,6 +69,8 @@ export async function apiFetch<T>(
   // An explicit token is passed by the sign-in action, which runs before the
   // cookie it is about to set exists.
   const sessionToken = token === undefined ? await readSessionToken() : token;
+  // Ids from the browser are part of these paths; see request-guards.ts.
+  assertSafeApiPath(path);
 
   const response = await fetch(`${API_URL}${path}`, {
     ...requestInit,
@@ -1183,6 +1186,8 @@ export function getCheckSubmission(brandId: string, id: string): Promise<CheckSu
 
 export interface ReviewCheckSubmissionInput {
   note?: string;
+  /** Approve only: the amount on the check, e.g. "125.00". */
+  amount?: string;
 }
 
 export function approveCheckSubmission(

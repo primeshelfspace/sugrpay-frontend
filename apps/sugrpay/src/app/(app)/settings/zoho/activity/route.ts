@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { API_URL } from '@/lib/api';
+import { isId } from '@/lib/request-guards';
 import { readSessionToken } from '@/lib/session';
 
 /**
@@ -11,7 +12,7 @@ import { readSessionToken } from '@/lib/session';
  */
 export async function GET(request: NextRequest): Promise<NextResponse> {
   const brandId = request.nextUrl.searchParams.get('brandId');
-  if (!brandId) {
+  if (!isId(brandId)) {
     return NextResponse.json({ message: 'missing brandId' }, { status: 400 });
   }
 

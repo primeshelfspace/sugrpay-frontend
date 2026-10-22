@@ -66,8 +66,12 @@ function describeStripeError(raw: string): string {
     connect_failed: 'Stripe did not return a consent link.',
     invalid_or_expired_state: 'That connection link expired. Try again.',
     unknown_brand: 'That brand no longer exists.',
+    not_configured: 'This connection is not set up on the server yet.',
+    forbidden: 'You do not have permission to connect this.',
   };
-  return KNOWN[raw] ?? raw;
+  // Only fixed messages: the code arrives in the URL, and free text there
+  // would let a crafted link put any words on this page.
+  return KNOWN[raw] ?? 'Something went wrong. Please try again.';
 }
 
 function describeSquareError(raw: string): string {
@@ -77,8 +81,12 @@ function describeSquareError(raw: string): string {
     connect_failed: 'Square did not return a consent link.',
     invalid_or_expired_state: 'That connection link expired. Try again.',
     unknown_brand: 'That brand no longer exists.',
+    not_configured: 'This connection is not set up on the server yet.',
+    forbidden: 'You do not have permission to connect this.',
   };
-  return KNOWN[raw] ?? raw;
+  // Only fixed messages: the code arrives in the URL, and free text there
+  // would let a crafted link put any words on this page.
+  return KNOWN[raw] ?? 'Something went wrong. Please try again.';
 }
 
 export const dynamic = 'force-dynamic';
@@ -224,6 +232,9 @@ const ZOHO_ERROR_MESSAGES: Record<string, string> = {
   invalid_or_expired_state: 'That connection link expired — start again.',
   no_organizations: 'That Zoho account has no organizations in Zoho Books to connect.',
   unknown_brand: 'This brand could not be resolved.',
+  not_configured: 'Zoho is not set up on the server yet.',
+  consent_declined: 'The connection was not approved in Zoho.',
+  forbidden: 'You do not have permission to connect Zoho.',
 };
 
 export default async function BrandSettingsPage({
@@ -252,7 +263,7 @@ export default async function BrandSettingsPage({
 }) {
   const params = await searchParams;
   const zohoErrorMessage = params.error
-    ? (ZOHO_ERROR_MESSAGES[params.error] ?? params.error)
+    ? (ZOHO_ERROR_MESSAGES[params.error] ?? 'Zoho could not be connected. Please try again.')
     : null;
   const selectedGateway = parseGatewayProvider(params.gateway);
 

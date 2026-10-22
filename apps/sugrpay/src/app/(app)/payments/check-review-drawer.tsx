@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { Eye, X } from 'lucide-react';
 import { toast } from '@platform/ui/toast';
 import { formatDateForDisplay } from '@platform/kernel';
-import { formatMinorForDisplay, toCurrencyCode } from '@platform/kernel/money';
+import { formatMinor, formatMinorForDisplay, toCurrencyCode } from '@platform/kernel/money';
 import type { CheckSubmissionDetail } from '@/lib/api';
 import { useCan } from '@/hooks/use-permissions';
 import {
@@ -73,6 +73,9 @@ export function CheckReviewDrawer({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [note, setNote] = useState('');
+  // What the reviewer reads on the check — prefilled with the customer's
+  // claim, but the payment recorded on approval is this figure.
+  const [amount, setAmount] = useState('');
   const [submitting, setSubmitting] = useState<'approve' | 'reject' | null>(null);
   const [previewSide, setPreviewSide] = useState<'Front' | 'Back' | null>(null);
   const canReview = useCan('CHECK_APPROVAL', 'APPROVE');
@@ -86,8 +89,10 @@ export function CheckReviewDrawer({
     setLoading(true);
     getCheckSubmissionDetailAction(brandId, checkId)
       .then((result) => {
-        if (result.ok) setDetail(result.data);
-        else setError(result.error);
+        if (result.ok) {
+          setDetail(result.data);
+          setAmount(formatMinor(result.data.amountMinor, toCurrencyCode(result.data.currency)));
+        } else setError(result.error);
       })
       .catch((cause) =>
         setError(cause instanceof Error ? cause.message : 'Could not load this check.'),
@@ -103,10 +108,17 @@ export function CheckReviewDrawer({
       toast.error('A reason is required to reject a check.');
       return;
     }
+    if (decision === 'approve' && !/^\d+(\.\d{1,2})?$/.test(amount.trim())) {
+      toast.error('Enter the amount written on the check, e.g. 125.00.');
+      return;
+    }
     setSubmitting(decision);
     const action =
       decision === 'approve' ? approveCheckSubmissionAction : rejectCheckSubmissionAction;
-    const result = await action(brandId, detail.id, { note: note.trim() || undefined });
+    const result = await action(brandId, detail.id, {
+      note: note.trim() || undefined,
+      ...(decision === 'approve' ? { amount: amount.trim() } : {}),
+    });
     setSubmitting(null);
     if (!result.ok) {
       toast.error(result.error);
@@ -224,7 +236,20 @@ export function CheckReviewDrawer({
 
               {detail.status === 'PENDING' && canReview ? (
                 <div>
-                  <h3 className="text-base font-bold text-ink-strong">Internal Notes</h3>
+                  <h3 className="text-base font-bold text-ink-strong">Amount on the check</h3>
+                  <input
+                    value={amount}
+                    onChange={(event) => setAmount(event.target.value)}
+                    inputMode="decimal"
+                    aria-label="Amount on the check"
+                    className="mt-2 h-10 w-48 rounded-lg border border-[#D4D4D4] bg-white px-3 text-sm text-ink-strong
+                               focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900
+                               focus-visible:ring-offset-1"
+                  />
+                  <p className="mt-1 text-xs text-ink-muted">
+                    This is the payment recorded when you approve. Check it against the image.
+                  </p>
+                  <h3 className="mt-6 text-base font-bold text-ink-strong">Internal Notes</h3>
                   <textarea
                     value={note}
                     onChange={(event) => setNote(event.target.value)}
