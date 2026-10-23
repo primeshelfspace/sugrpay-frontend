@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { API_URL } from './api';
+import { apiUrlFor } from './api-urls';
 import { isId, isProviderConsentUrl } from './request-guards';
 import { LOGIN_PATH, readSessionToken } from './session';
 
@@ -51,9 +51,12 @@ export async function startProviderConnect(
   const token = await readSessionToken();
   if (!token) return NextResponse.redirect(new URL(LOGIN_PATH, request.url));
 
+  // Zoho's connect is Sugrpay's; Stripe's and Square's are the platform's.
+  const path = `/brands/${brandId}/integrations/${provider}/connect`;
+  const apiUrl = apiUrlFor(path);
   let upstream: Response;
   try {
-    upstream = await fetch(`${API_URL}/brands/${brandId}/integrations/${provider}/connect`, {
+    upstream = await fetch(`${apiUrl}${path}`, {
       headers: { Authorization: `Bearer ${token}` },
       redirect: 'manual',
       cache: 'no-store',
@@ -79,7 +82,7 @@ export async function startProviderConnect(
   // stand-in for one), whatever the upstream answered.
   const sameApi = (() => {
     try {
-      return new URL(location).origin === new URL(API_URL).origin;
+      return new URL(location).origin === new URL(apiUrl).origin;
     } catch {
       return false;
     }

@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { API_URL } from '@/lib/api';
+import { SUGRPAY_API_URL } from '@/lib/api-urls';
 import { isId, isSameOrigin } from '@/lib/request-guards';
 import { readSessionToken } from '@/lib/session';
 
@@ -14,7 +14,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   const token = await readSessionToken();
   if (!token) return NextResponse.json({ message: 'not signed in' }, { status: 401 });
 
-  const upstream = await fetch(`${API_URL}/brands/${brandId}/integrations/zoho/backfill`, {
+  const upstream = await fetch(`${SUGRPAY_API_URL}/brands/${brandId}/integrations/zoho/backfill`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${token}` },
   });

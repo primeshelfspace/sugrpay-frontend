@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { API_URL } from '@/lib/api';
+import { SUGRPAY_API_URL } from '@/lib/api-urls';
 import { isId } from '@/lib/request-guards';
 import { readSessionToken } from '@/lib/session';
 
@@ -26,10 +26,13 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     if (value) paging.set(key, value);
   }
   const query = paging.toString() ? `?${paging.toString()}` : '';
-  const upstream = await fetch(`${API_URL}/brands/${brandId}/integrations/zoho/activity${query}`, {
-    headers: { Authorization: `Bearer ${token}` },
-    cache: 'no-store',
-  });
+  const upstream = await fetch(
+    `${SUGRPAY_API_URL}/brands/${brandId}/integrations/zoho/activity${query}`,
+    {
+      headers: { Authorization: `Bearer ${token}` },
+      cache: 'no-store',
+    },
+  );
   const body = await upstream.text();
   return new NextResponse(body, {
     status: upstream.status,

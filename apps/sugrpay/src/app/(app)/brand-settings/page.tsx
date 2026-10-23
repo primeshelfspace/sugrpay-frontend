@@ -46,6 +46,7 @@ import {
   type BrandSettingsTab,
   type BrandingSubTab,
 } from './tabs';
+import { SUGRPAY_API_URL } from '@/lib/api-urls';
 
 const PAYMENT_GATEWAY_PROVIDERS = ['STRIPE', 'PAYPAL', 'SQUARE', 'AUTHORIZE_NET'] as const;
 
@@ -108,7 +109,6 @@ function txRangeCutoffIso(range: string): string | undefined {
 const PAYMENT_PUBLIC_URL =
   process.env['NEXT_PUBLIC_PAYMENT_PUBLIC_URL'] ?? 'http://localhost:3000/pay';
 // Same convention as the Invoices detail drawer's "Download PDF" button.
-const API_URL = process.env['NEXT_PUBLIC_API_URL'] ?? 'http://localhost:4000';
 
 /**
  * What the Payment Page tab's preview shows: this brand's actual most recent
@@ -148,7 +148,9 @@ async function loadPreviewInvoice(brandId: string): Promise<PaymentPagePreviewIn
     // The payment page is what the emailed button opens; its own "Download
     // invoice" action opens this — the real PDF, not another page.
     invoiceUrl:
-      latest.status === 'DRAFT' ? null : `${API_URL}/public/invoices/${latest.publicToken}/pdf`,
+      latest.status === 'DRAFT'
+        ? null
+        : `${SUGRPAY_API_URL}/public/invoices/${latest.publicToken}/pdf`,
   };
 }
 

@@ -14,7 +14,7 @@ import type {
 import { readSessionToken } from './session';
 import { assertSafeApiPath } from '@/lib/request-guards';
 
-const API_URL = process.env['NEXT_PUBLIC_API_URL'] ?? 'http://localhost:4000';
+import { apiUrlFor } from '@/lib/api-urls';
 
 export class ApiError extends Error {
   constructor(
@@ -45,7 +45,7 @@ export async function apiFetch<T>(
   // Ids from the browser are part of these paths; see request-guards.ts.
   assertSafeApiPath(path);
 
-  const response = await fetch(`${API_URL}${path}`, {
+  const response = await fetch(`${apiUrlFor(path)}${path}`, {
     ...requestInit,
     headers: {
       'Content-Type': 'application/json',

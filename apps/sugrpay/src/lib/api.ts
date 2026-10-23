@@ -15,7 +15,7 @@ import { cache } from 'react';
 import { readSessionToken } from './session';
 import { assertSafeApiPath } from './request-guards';
 
-const API_URL = process.env['NEXT_PUBLIC_API_URL'] ?? 'http://localhost:4000';
+import { PLATFORM_API_URL, SUGRPAY_API_URL, apiUrlFor } from './api-urls';
 
 export class ApiError extends Error {
   constructor(
@@ -73,7 +73,7 @@ export async function apiFetch<T>(
   // Ids from the browser are part of these paths; see request-guards.ts.
   assertSafeApiPath(path);
 
-  const response = await fetch(`${API_URL}${path}`, {
+  const response = await fetch(`${apiUrlFor(path)}${path}`, {
     ...requestInit,
     credentials: 'include',
     headers: {
@@ -115,7 +115,8 @@ async function apiUploadFetch<T>(path: string, file: File): Promise<T> {
   const body = new FormData();
   body.append('file', file);
 
-  const response = await fetch(`${API_URL}${path}`, {
+  assertSafeApiPath(path);
+  const response = await fetch(`${apiUrlFor(path)}${path}`, {
     method: 'POST',
     credentials: 'include',
     headers: token ? { Authorization: `Bearer ${token}` } : {},
@@ -1577,4 +1578,4 @@ export function getDashboardIntegrationsStatus(
   );
 }
 
-export { API_URL };
+export { PLATFORM_API_URL, SUGRPAY_API_URL, apiUrlFor };

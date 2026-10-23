@@ -32,6 +32,7 @@ import { useCan } from '@/hooks/use-permissions';
 import { cancelInvoiceAction } from './actions';
 import { RecordPaymentModal } from './record-payment-modal';
 import { SendInvoiceModal } from './send-invoice-modal';
+import { SUGRPAY_API_URL } from '@/lib/api-urls';
 
 /** Same "issued and still owing" states the API's RECORD_PAYMENT accepts. */
 const RECORDABLE_STATUSES = new Set(['SENT', 'VIEWED', 'PENDING_PAYMENT', 'PARTIALLY_PAID']);
@@ -291,7 +292,7 @@ export function InvoiceDetailDrawer({
               disabled until the invoice is actually sent. */}
             {invoice && status !== 'DRAFT' ? (
               <a
-                href={`${process.env['NEXT_PUBLIC_API_URL'] ?? 'http://localhost:4000'}/public/invoices/${invoice.publicToken}/pdf`}
+                href={`${SUGRPAY_API_URL}/public/invoices/${invoice.publicToken}/pdf`}
                 className="inline-flex h-9 items-center gap-2 rounded-lg border border-[#D4D4D4] bg-white px-4
                            text-sm font-bold text-ink-strong transition-colors hover:bg-surface-muted"
               >

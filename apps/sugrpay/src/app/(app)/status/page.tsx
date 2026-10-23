@@ -1,7 +1,7 @@
 import { Activity, CircleCheck, CircleX, Plug } from 'lucide-react';
 import { BRAND_COLOUR_PRESETS, assessBrandColour } from '@platform/kernel/tokens';
 import { BrandTheme } from '@/components/brand-theme';
-import { API_URL, getHealth, type HealthResponse } from '@/lib/api';
+import { PLATFORM_API_URL, SUGRPAY_API_URL, getHealth, type HealthResponse } from '@/lib/api';
 import { PageContainer } from '@/components/page-container';
 
 // The status of live dependencies is never cached.
@@ -33,7 +33,9 @@ export default async function StatusPage() {
         <div className="mb-4 flex items-center gap-2">
           <Activity className="h-4 w-4 text-ink-muted" aria-hidden />
           <h2 className="font-medium text-ink-strong">API health</h2>
-          <span className="ml-auto font-mono text-xs text-ink-subtle">{API_URL}</span>
+          <span className="ml-auto font-mono text-xs text-ink-subtle">
+            platform {PLATFORM_API_URL} · sugrpay {SUGRPAY_API_URL}
+          </span>
         </div>
 
         {error ? (
