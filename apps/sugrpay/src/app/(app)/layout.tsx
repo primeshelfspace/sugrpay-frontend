@@ -30,8 +30,17 @@ export default async function AuthenticatedLayout({ children }: { children: Reac
   // on who the user is, so it starts alongside getCurrentUser instead of
   // after it; a failure here still falls back to "no brands" exactly as
   // before, it just no longer blocks behind the session check to do so.
+  //
+  // The company's onboarding record starts in the same round too: it is
+  // needed on every navigation except a first-login password reset, and
+  // waiting for the user before asking for it cost a whole extra round trip
+  // on every click.
   let user: CurrentUser;
   let brands: Brand[] = [];
+  const merchantRequest = getMerchantOnboarding().then(
+    (value) => ({ ok: true as const, value }),
+    () => ({ ok: false as const }),
+  );
   try {
     const [resolvedUser, resolvedBrands] = await Promise.all([
       getCurrentUser(),
@@ -72,7 +81,11 @@ export default async function AuthenticatedLayout({ children }: { children: Reac
   let merchant: MerchantOnboardingState | undefined;
   try {
     if (!user.mustResetPassword) {
-      merchant = await getMerchantOnboarding();
+      const fetched = await merchantRequest;
+      // Asked for before the session was confirmed; a failure here is
+      // treated like the session check failing, as before.
+      if (!fetched.ok) throw new Error('onboarding state unavailable');
+      merchant = fetched.value;
     }
     step = await resolveOnboardingStep(user, merchant);
   } catch {

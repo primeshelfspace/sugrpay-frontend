@@ -188,6 +188,9 @@ export function AdminShell({
     return (
       <Link
         href={hrefFor(href)}
+        // Load the whole page ahead of the click, not just its loading
+        // state, so opening a section from the sidebar is immediate.
+        prefetch
         aria-current={active ? 'page' : undefined}
         className={`flex items-center gap-3 rounded-lg px-3 py-2 text-[15px] transition-colors ${
           active

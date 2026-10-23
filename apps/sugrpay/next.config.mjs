@@ -27,6 +27,15 @@ const nextConfig = {
     serverActions: {
       bodySizeLimit: '6mb',
     },
+    // How long the browser keeps a page it already has. Next 15's default for
+    // these always-dynamic pages is 0 — every click, even Back, went to the
+    // server and waited for a full render on the far side of the world. A
+    // save (server action) clears this cache, so the user's own changes still
+    // show at once; others' changes show within these limits or on reload.
+    staleTimes: {
+      dynamic: 30,
+      static: 60,
+    },
   },
 
   // No source maps in production and no X-Powered-By: the public payment pages

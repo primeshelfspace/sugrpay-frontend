@@ -11,6 +11,7 @@
 
 import type { InvoiceStatus } from '@platform/invoicing-contracts';
 import type { BusinessType, PermissionGrants, Role } from '@platform/platform-contracts';
+import { cache } from 'react';
 import { readSessionToken } from './session';
 import { assertSafeApiPath } from './request-guards';
 
@@ -181,9 +182,10 @@ export function logout(): Promise<void> {
   return apiFetch<void>('/auth/logout', { method: 'POST' });
 }
 
-export function getCurrentUser(): Promise<CurrentUser> {
-  return apiFetch<CurrentUser>('/auth/me');
-}
+// The layout and the page both need the user, the brands and the onboarding
+// state on every navigation. cache() makes them share one request per render
+// instead of asking the API twice.
+export const getCurrentUser = cache((): Promise<CurrentUser> => apiFetch<CurrentUser>('/auth/me'));
 
 // --- Users & Roles (FR-USR) --------------------------------------------------
 //
@@ -296,9 +298,7 @@ export interface Brand {
   logoUrl: string | null;
 }
 
-export function listBrands(): Promise<Brand[]> {
-  return apiFetch<Brand[]>('/brands');
-}
+export const listBrands = cache((): Promise<Brand[]> => apiFetch<Brand[]>('/brands'));
 
 /** Mirrors brandSchema in the API exactly — nullable fields must be sent as
  * `null`, not omitted. Shared by create (which adds invoicePrefix, a
@@ -383,9 +383,9 @@ export interface MerchantOnboardingState {
   onboardingComplete: boolean;
 }
 
-export function getMerchantOnboarding(): Promise<MerchantOnboardingState> {
-  return apiFetch<MerchantOnboardingState>('/merchant/onboarding');
-}
+export const getMerchantOnboarding = cache((): Promise<MerchantOnboardingState> =>
+  apiFetch<MerchantOnboardingState>('/merchant/onboarding'),
+);
 
 export interface CompanyDetailsFormInput {
   legalName: string;
