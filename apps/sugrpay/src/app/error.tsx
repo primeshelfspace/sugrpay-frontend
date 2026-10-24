@@ -20,6 +20,14 @@ export default function GlobalError({
   reset: () => void;
 }) {
   useEffect(() => {
+    // A page opened before a deploy still holds the old build's form actions,
+    // which the new build no longer has. Reloading fetches the new page; the
+    // user only has to press the button again. Once per tab session, so a
+    // real failure cannot turn into a reload loop.
+    if (isStaleDeployment(error) && !alreadyReloaded()) {
+      window.location.reload();
+      return;
+    }
     // The full error still reaches the browser console for whoever is
     // debugging — this boundary only changes what the user sees.
     // eslint-disable-next-line no-console
@@ -47,5 +55,28 @@ export default function GlobalError({
         </button>
       </div>
     </main>
+  );
+}
+
+const RELOADED_KEY = 'sugrpay:reloaded-after-deploy';
+
+/** Records the reload, and says whether this tab already did one. Storage
+ * can be unavailable (private mode); then never reload, to stay safe. */
+function alreadyReloaded(): boolean {
+  try {
+    if (sessionStorage.getItem(RELOADED_KEY)) return true;
+    sessionStorage.setItem(RELOADED_KEY, '1');
+    return false;
+  } catch {
+    return true;
+  }
+}
+
+/** The page belongs to an older deploy than the server (see GlobalError). */
+function isStaleDeployment(error: Error): boolean {
+  return (
+    error.name === 'UnrecognizedActionError' ||
+    /Server Action .* was not found|Failed to find Server Action/i.test(error.message) ||
+    /ChunkLoadError|Loading chunk .* failed/i.test(`${error.name} ${error.message}`)
   );
 }
