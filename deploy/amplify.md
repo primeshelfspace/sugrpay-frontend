@@ -69,7 +69,7 @@ cd ~/platform && bash deploy/set-public-urls.sh --site https://<site>
 ## Changing the backend addresses
 
 The backend is three APIs. The web app calls the platform API and the Sugrpay API, each at its
-own address (, ); unset, both fall back to
-, the front door (https://api.sugrpay.com) that routes every path to the right
+own address (`NEXT_PUBLIC_PLATFORM_API_URL`, `NEXT_PUBLIC_SUGRPAY_API_URL`); unset, both fall back to
+`NEXT_PUBLIC_API_URL`, the front door (https://api.sugrpay.com) that routes every path to the right
 API. To change them without touching the other settings, run [set-api-urls.sh](set-api-urls.sh) in
 AWS CloudShell (it rebuilds the app).
