@@ -23,7 +23,7 @@ e.g. `https://main.<id>.amplifyapp.com`, or your own domain later):
 
 ```
 AMPLIFY_MONOREPO_APP_ROOT=apps/sugrpay
-NEXT_PUBLIC_API_URL=https://api.13-56-132-111.sslip.io
+NEXT_PUBLIC_API_URL=https://api.sugrpay.com
 NEXT_PUBLIC_INVOICING_URL=https://<site>
 NEXT_PUBLIC_ACCOUNTS_URL=https://<site>/accounts
 NEXT_PUBLIC_PAYMENT_PUBLIC_URL=https://<site>/pay
@@ -37,7 +37,7 @@ The same from CloudShell (replace `<app id>`; the site is filled in from it):
 ```bash
 APP=<app id>; R=us-west-1; SITE=https://main.$APP.amplifyapp.com
 aws amplify update-app --app-id $APP --region $R --platform WEB_COMPUTE \
-  --environment-variables "AMPLIFY_MONOREPO_APP_ROOT=apps/sugrpay,NEXT_PUBLIC_API_URL=https://api.13-56-132-111.sslip.io,NEXT_PUBLIC_INVOICING_URL=$SITE,NEXT_PUBLIC_ACCOUNTS_URL=$SITE/accounts,NEXT_PUBLIC_PAYMENT_PUBLIC_URL=$SITE/pay,NEXT_PUBLIC_ASSET_ORIGIN=https://invoice-dev-839810213531-us-east-1-an.s3.us-east-1.amazonaws.com"
+  --environment-variables "AMPLIFY_MONOREPO_APP_ROOT=apps/sugrpay,NEXT_PUBLIC_API_URL=https://api.sugrpay.com,NEXT_PUBLIC_INVOICING_URL=$SITE,NEXT_PUBLIC_ACCOUNTS_URL=$SITE/accounts,NEXT_PUBLIC_PAYMENT_PUBLIC_URL=$SITE/pay,NEXT_PUBLIC_ASSET_ORIGIN=https://invoice-dev-839810213531-us-east-1-an.s3.us-east-1.amazonaws.com"
 aws amplify update-branch --app-id $APP --branch-name main --region $R --framework "Next.js - SSR" --enable-auto-build
 aws amplify start-job --app-id $APP --branch-name main --region $R --job-type RELEASE
 ```
@@ -65,3 +65,11 @@ cd ~/platform && bash deploy/set-public-urls.sh --site https://<site>
 - Sign in → back on `https://<site>/`, signed in.
 - `https://<site>/accounts/team` shows the team page, still signed in.
 - An invoice's payment link is `https://<site>/pay/i/…`.
+
+## Changing the backend addresses
+
+The backend is three APIs. The web app calls the platform API and the Sugrpay API, each at its
+own address (, ); unset, both fall back to
+, the front door (https://api.sugrpay.com) that routes every path to the right
+API. To change them without touching the other settings, run [set-api-urls.sh](set-api-urls.sh) in
+AWS CloudShell (it rebuilds the app).
