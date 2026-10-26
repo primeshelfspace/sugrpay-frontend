@@ -7,6 +7,8 @@ import { safeReturnPath, writeSessionToken } from '@/accounts/lib/session';
 
 export interface LoginState {
   readonly error?: string;
+  /** 'credentials' shows the reset-password link beside the error. */
+  readonly kind?: 'credentials' | 'other';
   /** Kept so the field is not cleared under the user when the attempt fails. */
   readonly email?: string;
 }
@@ -16,7 +18,8 @@ export interface LoginState {
  * only messages that differ are the ones that are not about credentials at all —
  * an empty field, or the API being unreachable.
  */
-const GENERIC_FAILURE = 'That email and password combination was not recognised.';
+const GENERIC_FAILURE =
+  'Incorrect email or password. Check both and try again — or reset your password if you have forgotten it.';
 
 export async function loginAction(_prevState: LoginState, formData: FormData): Promise<LoginState> {
   const email = String(formData.get('email') ?? '').trim();
@@ -39,10 +42,27 @@ export async function loginAction(_prevState: LoginState, formData: FormData): P
     if (error instanceof ApiError) {
       // 401 is a rejected credential; 400 is a malformed address, which is still
       // not worth distinguishing to whoever is typing. Anything else is ours.
-      if (error.status === 401 || error.status === 400) return { error: GENERIC_FAILURE, email };
-      return { error: `Could not reach the sign-in service (${error.status}).`, email };
+      if (error.status === 401 || error.status === 400) {
+        return { error: GENERIC_FAILURE, kind: 'credentials', email };
+      }
+      if (error.status === 429) {
+        return {
+          error: 'Too many sign-in attempts. Wait a few minutes, then try again.',
+          kind: 'credentials',
+          email,
+        };
+      }
+      return {
+        error: 'Sign-in is not working right now. Please try again in a minute.',
+        kind: 'other',
+        email,
+      };
     }
-    return { error: 'Could not reach the sign-in service.', email };
+    return {
+      error: 'Sign-in is not working right now. Please try again in a minute.',
+      kind: 'other',
+      email,
+    };
   }
 
   await writeSessionToken(result.token, new Date(result.expiresAt));

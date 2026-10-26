@@ -7,7 +7,6 @@ import {
   FIELD_INVALID_BORDER as invalidBorder,
   FIELD_VALID_BORDER_SECONDARY as validBorder,
 } from '@/accounts/components/ui/form-styles';
-import { useFormStatusToast } from '@/accounts/hooks/use-form-status-toast';
 import { loginAction, type LoginState } from './actions';
 
 const initialState: LoginState = {};
@@ -25,7 +24,6 @@ interface FieldErrors {
 
 export function LoginForm({ returnTo }: { returnTo: string }) {
   const [state, formAction, pending] = useActionState(loginAction, initialState);
-  useFormStatusToast(state);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const emailId = useId();
   const passwordId = useId();
@@ -107,21 +105,23 @@ export function LoginForm({ returnTo }: { returnTo: string }) {
         )}
       </label>
 
-      <div className="flex items-start gap-2.5 rounded-[10px] bg-[#E8EFFE] px-4 py-3.5">
-        <svg
-          viewBox="0 0 20 20"
-          fill="none"
-          className="mt-0.5 h-5 w-5 shrink-0 text-[#3B5BDB]"
-          aria-hidden
+      {state.error && (
+        <div
+          role="alert"
+          className="rounded-[10px] border border-red-200 bg-red-50 px-4 py-3.5 text-sm text-red-700"
         >
-          <circle cx="10" cy="10" r="8.25" stroke="currentColor" strokeWidth="1.5" />
-          <path d="M10 9v4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-          <circle cx="10" cy="6.5" r="0.9" fill="currentColor" />
-        </svg>
-        <p className="text-sm text-[#3B5BDB]">
-          You&rsquo;ll be required to reset your password after logging in.
-        </p>
-      </div>
+          <p>{state.error}</p>
+          {state.kind === 'credentials' && (
+            <p className="mt-1.5">
+              <a href="/accounts/forgot-password" className="font-semibold underline">
+                Reset your password
+              </a>{' '}
+              — we&rsquo;ll email you a link. After 5 wrong tries the account is locked for 30
+              minutes.
+            </p>
+          )}
+        </div>
+      )}
 
       <button
         type="submit"
