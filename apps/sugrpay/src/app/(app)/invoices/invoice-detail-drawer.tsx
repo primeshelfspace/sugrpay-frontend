@@ -71,6 +71,9 @@ const EVENT_LABEL: Record<string, string> = {
   // Recorded by the old resend-only endpoint, before it merged into
   // sendEmail — kept so already-recorded history still reads nicely.
   EMAIL_RESENT: 'Invoice emailed',
+  EMAIL_REJECTED: 'Email address refused',
+  EMAIL_BOUNCED: 'Email bounced',
+  EMAIL_COMPLAINED: 'Marked as spam by recipient',
 };
 
 function eventLabel(entry: InvoiceActivityEntry): string {
@@ -583,7 +586,16 @@ export function InvoiceDetailDrawer({
                           key={i}
                           className="flex items-center justify-between gap-4 py-3.5 text-sm"
                         >
-                          <span className="font-medium text-ink-strong">{eventLabel(entry)}</span>
+                          <span className="min-w-0">
+                            <span className="block font-medium text-ink-strong">
+                              {eventLabel(entry)}
+                            </span>
+                            {entry.detail && (
+                              <span className="block break-words text-xs text-ink-muted">
+                                {entry.detail}
+                              </span>
+                            )}
+                          </span>
                           <span className="shrink-0 text-xs text-ink-muted">
                             {new Date(entry.occurredAt).toLocaleString()}
                           </span>

@@ -18,6 +18,7 @@ import {
   type InvoiceDetail,
   type InvoiceEmailDraft,
   type InvoiceEmailSendInput,
+  type InvoiceEmailSendResult,
   type ManualPaymentInput,
 } from '@/lib/api';
 import { describeActionError } from '@/lib/form';
@@ -147,7 +148,7 @@ export async function sendInvoiceEmailAction(
   brandId: string,
   id: string,
   input: InvoiceEmailSendInput,
-): Promise<ActionResult<{ sent: true }>> {
+): Promise<ActionResult<InvoiceEmailSendResult>> {
   try {
     const result = await sendInvoiceEmail(brandId, id, input);
     return { ok: true, data: result };

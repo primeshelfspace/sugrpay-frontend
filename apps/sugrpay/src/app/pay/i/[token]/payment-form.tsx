@@ -10,8 +10,10 @@ import {
 import { API_URL } from '@/pay/lib/env';
 import type { PublicInvoice } from '@/pay/lib/invoice';
 import { useAmountDue } from './amount-due-context';
+import { AchBankTransferForm } from './ach-form';
 import { CheckUploadForm } from './check-upload-form';
 import { StripeCardForm, type CreateIntentResult } from './stripe-card-form';
+import { WalletPayForm } from './wallet-pay-form';
 import { CreditCardIcon, FileCheckIcon, LandmarkIcon, WalletIcon } from './icons';
 
 /** The API's PaymentMethod values this page can attempt. MANUAL is the
@@ -64,12 +66,14 @@ function randomNonce(): string {
  * PaymentsService.createIntent still only runs once the customer actually
  * submits that form, not the moment they select the tile, so opening the
  * real intent (INITIATE_PAYMENT, a Payment row) never happens just because
- * someone was browsing options. ACH/Wallet have no such split-second
- * confirmation step, so they still go through the single outer "Pay" button
- * below the grid. Check is its own third case: CheckUploadForm posts
- * straight to /public/invoices/:token/checks (no gateway, no Payment row —
- * just a row for staff to review), so it mounts its own form and submit
- * button exactly like Card does, rather than the outer button.
+ * someone was browsing options. ACH (AchBankTransferForm) and Wallet
+ * (WalletPayForm) follow the exact same deferred shape — a bank-account form
+ * and an Express Checkout (Apple Pay/Google Pay) element, respectively, each
+ * with their own submit — because a real gateway attempt needs a payment
+ * method attached before it can resolve, not just a method name. Check is a
+ * fourth case with no gateway attempt at all: CheckUploadForm posts straight
+ * to /public/invoices/:token/checks (no Payment row — just a row for staff to
+ * review), so it mounts its own form and submit button the same way.
  */
 export function PaymentForm({
   invoice,
@@ -159,10 +163,10 @@ export function PaymentForm({
     return body;
   }
 
-  /** Backs the outer "Pay" button — every method except CARD (which mounts
-   * StripeCardForm) and CHECK (which mounts CheckUploadForm), both of which
-   * drive their own submit from inside their own handler instead. */
-  async function submitNonCard(method: Exclude<Method, 'CARD' | 'CHECK'>) {
+  /** For a gateway with nothing to do in the browser — the local fake
+   * gateway, which settles, declines or leaves pending on the server alone.
+   * With Stripe, ACH and Wallet use their own forms below instead. */
+  async function submitServerSide(method: 'ACH' | 'WALLET') {
     setStep({ kind: 'processing' });
     try {
       const body = await createIntent(method);
@@ -177,6 +181,10 @@ export function PaymentForm({
       });
     }
   }
+
+  // Stripe's browser step (bank sign-in, Apple Pay / Google Pay sheet) needs
+  // the brand's connected Stripe account.
+  const hasStripe = Boolean(invoice.stripePublishableKey && invoice.stripeAccountId);
 
   return (
     <div>
@@ -237,24 +245,57 @@ export function PaymentForm({
           amountLabel={amountLabel}
           onSubmitted={() => setStep({ kind: 'checkSubmitted' })}
         />
-      ) : (
-        <>
-          {chosen && (
-            <p className="mt-5 rounded-lg border border-dashed border-[#E5E7EB] bg-surface-muted px-4 py-6 text-center text-sm text-ink-muted">
-              You will be redirected to complete payment via {chosen.label}.
-            </p>
-          )}
-          <button
-            type="button"
-            disabled={!chosen}
-            onClick={() => chosen && submitNonCard(chosen.key as Exclude<Method, 'CARD' | 'CHECK'>)}
-            style={{ backgroundColor: invoice.accentColor }}
-            className="mt-5 w-full rounded-lg py-3 text-sm font-bold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
-          >
-            Pay {amountLabel}
-          </button>
-        </>
-      )}
+      ) : chosen && !hasStripe ? (
+        <button
+          type="button"
+          onClick={() => void submitServerSide(chosen.key as 'ACH' | 'WALLET')}
+          style={{ backgroundColor: invoice.accentColor }}
+          className="mt-5 w-full rounded-lg py-3 text-sm font-bold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
+        >
+          Pay {amountLabel}
+        </button>
+      ) : chosen?.key === 'ACH' ? (
+        <AchBankTransferForm
+          publishableKey={invoice.stripePublishableKey}
+          stripeAccount={invoice.stripeAccountId}
+          accentColor={invoice.accentColor}
+          amountLabel={amountLabel}
+          businessName={invoice.brand.displayName}
+          onCreateIntent={() => createIntent('ACH')}
+          onSucceeded={(clientSecret) => {
+            if (clientSecret) void reconcile(clientSecret);
+            setStep({ kind: 'success' });
+          }}
+          onFailed={(clientSecret, reason) => {
+            if (clientSecret) void reconcile(clientSecret);
+            setStep({ kind: 'failure', reason });
+          }}
+          onPending={() => setStep({ kind: 'pending' })}
+          onVerificationNeeded={(hostedVerificationUrl) =>
+            setStep({ kind: 'achVerificationNeeded', hostedVerificationUrl })
+          }
+          onError={(message) => setStep({ kind: 'error', message })}
+        />
+      ) : chosen?.key === 'WALLET' ? (
+        <WalletPayForm
+          publishableKey={invoice.stripePublishableKey}
+          stripeAccount={invoice.stripeAccountId}
+          currency={invoice.currency}
+          amountMinor={dueMinor}
+          returnUrl={typeof window !== 'undefined' ? window.location.href : ''}
+          onCreateIntent={() => createIntent('WALLET')}
+          onSucceeded={(clientSecret) => {
+            if (clientSecret) void reconcile(clientSecret);
+            setStep({ kind: 'success' });
+          }}
+          onFailed={(clientSecret, reason) => {
+            if (clientSecret) void reconcile(clientSecret);
+            setStep({ kind: 'failure', reason });
+          }}
+          onPending={() => setStep({ kind: 'pending' })}
+          onError={(message) => setStep({ kind: 'error', message })}
+        />
+      ) : null}
     </div>
   );
 }
@@ -265,6 +306,7 @@ type Step =
   | { kind: 'success' }
   | { kind: 'checkSubmitted' }
   | { kind: 'pending' }
+  | { kind: 'achVerificationNeeded'; hostedVerificationUrl: string | null }
   | { kind: 'failure'; reason: string | null }
   | { kind: 'error'; message: string };
 
@@ -304,8 +346,31 @@ function Outcome({ step, onRetry }: { step: Step; onRetry: () => void }) {
       <div className="rounded-lg border border-[#E5E7EB] bg-surface-muted px-4 py-6 text-center">
         <p className="text-sm font-bold text-ink-strong">Payment pending</p>
         <p className="mt-1 text-xs text-ink-muted">
-          Your bank transfer is being verified. This usually takes 1–2 business days.
+          Your bank transfer has been submitted. This usually takes a few business days to settle.
         </p>
+      </div>
+    );
+  }
+
+  if (step.kind === 'achVerificationNeeded') {
+    return (
+      <div className="rounded-lg border border-[#E5E7EB] bg-surface-muted px-4 py-6 text-center">
+        <p className="text-sm font-bold text-ink-strong">Verify your bank account</p>
+        <p className="mt-1 text-xs text-ink-muted">
+          We couldn&rsquo;t verify that account instantly. Two small deposits (or a short code) will
+          arrive in your account within 1&ndash;2 business days &mdash; once they do, use the link
+          below to finish verifying and complete this payment.
+        </p>
+        {step.hostedVerificationUrl && (
+          <a
+            href={step.hostedVerificationUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="mt-4 inline-block rounded-lg border border-[#D1D5DB] bg-white px-4 py-2 text-sm font-semibold text-ink-strong hover:bg-surface-muted"
+          >
+            Verify bank account
+          </a>
+        )}
       </div>
     );
   }

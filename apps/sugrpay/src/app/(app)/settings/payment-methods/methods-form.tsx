@@ -70,7 +70,7 @@ export function MethodsForm({
             layout="row"
             name="checkEnabled"
             label="Manual check upload"
-            hint="Not wired up in the payment app yet — enabling this has no visible effect today."
+            hint="Customers photograph and upload a check; a staff member reviews it from Payments > Check Verifications."
             checked={settings.checkEnabled}
             onChange={(v) => set('checkEnabled', v)}
           />
