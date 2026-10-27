@@ -12,12 +12,14 @@ const DETAIL_TONE: Record<NeedsAttentionItem['kind'], string> = {
   STALE_DRAFT: 'text-ink-subtle',
   DUE_SOON: 'text-warning',
   SYNC_FAILED: 'text-danger',
+  ZOHO_SYNC_STALE: 'text-warning',
 };
 
 const ICON_BADGE_TONE: Record<NeedsAttentionItem['kind'], string> = {
   STALE_DRAFT: 'bg-surface-muted text-ink-muted',
   DUE_SOON: 'bg-warning-surface text-warning',
   SYNC_FAILED: 'bg-danger-surface text-danger',
+  ZOHO_SYNC_STALE: 'bg-warning-surface text-warning',
 };
 
 function RetryButton({ syncJobId }: { syncJobId: string }) {
@@ -115,6 +117,13 @@ export function NeedsAttention({
 
                 {item.kind === 'SYNC_FAILED' && item.syncJobId ? (
                   <RetryButton syncJobId={item.syncJobId} />
+                ) : item.kind === 'ZOHO_SYNC_STALE' ? (
+                  <Link
+                    href={`/brand-settings?brandId=${targetBrandId}&tab=integrations`}
+                    className="shrink-0 rounded-full border border-border px-3.5 py-1.5 text-xs font-semibold text-ink-strong hover:bg-surface-muted"
+                  >
+                    Check setup
+                  </Link>
                 ) : item.invoiceNumber ? (
                   <Link
                     href={`/invoices?brandId=${targetBrandId}&search=${encodeURIComponent(item.invoiceNumber)}`}

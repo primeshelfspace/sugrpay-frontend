@@ -12,8 +12,11 @@ export function IntegrationsStatusBanner({
   lastSyncAt,
   needsAttentionCount,
   connectHref,
+  accountingDriverMismatch = false,
 }: {
   connected: boolean;
+  /** Connected to Zoho, but the server is not sending anything to Zoho. */
+  accountingDriverMismatch?: boolean;
   lastSyncAt: string | null;
   needsAttentionCount: number;
   /** Where "Connect Now" sends the merchant — always a concrete brand, even
@@ -33,6 +36,17 @@ export function IntegrationsStatusBanner({
         >
           Connect Now
         </Link>
+      </div>
+    );
+  }
+
+  if (accountingDriverMismatch) {
+    return (
+      <div className="mb-6 rounded-lg border border-[#FECACA] bg-danger-surface px-4 py-2 text-sm text-danger">
+        <span className="font-medium">
+          Zoho Books is connected, but nothing is being sent to it.
+        </span>{' '}
+        The server&rsquo;s accounting setting is not Zoho &mdash; contact support to switch it on.
       </div>
     );
   }
