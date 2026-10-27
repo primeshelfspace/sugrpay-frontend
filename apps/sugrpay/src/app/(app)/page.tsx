@@ -90,6 +90,7 @@ export default async function DashboardPage({
   let crossBrandCustomers: CrossBrandCustomersResult = { rows: [], matchedCount: 0 };
   let integrationsConnected = false;
   let integrationsLastSyncAt: string | null = null;
+  let accountingDriverMismatch = false;
   let dataError: string | null = null;
 
   if (brands.length > 0) {
@@ -136,6 +137,7 @@ export default async function DashboardPage({
       });
       integrationsConnected = integrationsStatus.connected;
       integrationsLastSyncAt = integrationsStatus.lastSyncAt;
+      accountingDriverMismatch = integrationsStatus.accountingDriverMismatch ?? false;
 
       // Without a live integration there's nothing trustworthy to report —
       // show the same zero/empty state a brand new, never-synced brand gets,
@@ -194,6 +196,7 @@ export default async function DashboardPage({
             <IntegrationsStatusBanner
               connected={integrationsConnected}
               lastSyncAt={integrationsLastSyncAt}
+              accountingDriverMismatch={accountingDriverMismatch}
               needsAttentionCount={needsAttention.totalCount}
               connectHref={
                 connectBrandId

@@ -1496,7 +1496,7 @@ export function getDashboardTopOverdueCustomers(
   );
 }
 
-export type NeedsAttentionKind = 'STALE_DRAFT' | 'DUE_SOON' | 'SYNC_FAILED';
+export type NeedsAttentionKind = 'STALE_DRAFT' | 'DUE_SOON' | 'SYNC_FAILED' | 'ZOHO_SYNC_STALE';
 
 export interface NeedsAttentionItem {
   kind: NeedsAttentionKind;
@@ -1575,6 +1575,9 @@ export function retrySyncJob(jobId: string): Promise<{ queued: true }> {
 export interface DashboardIntegrationsStatus {
   connected: boolean;
   lastSyncAt: string | null;
+  /** Zoho is connected but the API runs a non-Zoho accounting driver, so
+   * nothing actually reaches Zoho. Absent from older APIs. */
+  accountingDriverMismatch?: boolean;
 }
 
 /** One signal for both single-brand and All Brands mode — see
