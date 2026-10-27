@@ -5,6 +5,7 @@ import { loadStripe } from '@stripe/stripe-js';
 import type { StripeExpressCheckoutElementConfirmEvent } from '@stripe/stripe-js';
 import { Elements, ExpressCheckoutElement, useElements, useStripe } from '@stripe/react-stripe-js';
 import type { CreateIntentResult } from './stripe-card-form';
+import { outcomeOf } from './stripe-outcome';
 
 /**
  * The "Digital Wallet" block of the payment page — Apple Pay and Google Pay
@@ -60,7 +61,17 @@ export function WalletPayForm({
   }
 
   return (
-    <Elements stripe={stripePromise} options={{ mode: 'payment', amount: amountMinor, currency: currency.toLowerCase() }}>
+    <Elements
+      stripe={stripePromise}
+      options={{
+        mode: 'payment',
+        amount: amountMinor,
+        currency: currency.toLowerCase(),
+        // Wallets only — without this a connected account with Link or other
+        // methods enabled would show them here too.
+        paymentMethodTypes: ['card'],
+      }}
+    >
       <WalletInner
         returnUrl={returnUrl}
         onCreateIntent={onCreateIntent}
@@ -138,7 +149,10 @@ function WalletInner({
 
     if (confirmResult.error) {
       event.paymentFailed({ reason: 'fail' });
-      if (confirmResult.error.type === 'card_error' || confirmResult.error.type === 'validation_error') {
+      if (
+        confirmResult.error.type === 'card_error' ||
+        confirmResult.error.type === 'validation_error'
+      ) {
         onFailed(clientSecret, confirmResult.error.message ?? null);
       } else {
         onError(confirmResult.error.message ?? 'Something went wrong.');
@@ -146,9 +160,11 @@ function WalletInner({
       return;
     }
 
-    const status = confirmResult.paymentIntent?.status;
-    if (status === 'succeeded') onSucceeded(clientSecret);
-    else onFailed(clientSecret, null);
+    if (!confirmResult.paymentIntent) return onPending();
+    const outcome = outcomeOf(confirmResult.paymentIntent);
+    if (outcome.kind === 'succeeded') onSucceeded(clientSecret);
+    else if (outcome.kind === 'failed') onFailed(clientSecret, outcome.reason);
+    else onPending();
   }
 
   return (
@@ -159,8 +175,8 @@ function WalletInner({
       />
       {available === false && (
         <p className="mt-3 rounded-lg border border-dashed border-[#E5E7EB] bg-surface-muted px-4 py-6 text-center text-sm text-ink-muted">
-          Apple Pay and Google Pay aren&rsquo;t available in this browser or on this device. Please choose
-          another payment method.
+          Apple Pay and Google Pay aren&rsquo;t available in this browser or on this device. Please
+          choose another payment method.
         </p>
       )}
     </div>

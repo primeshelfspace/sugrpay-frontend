@@ -269,6 +269,12 @@ export function SendInvoiceModal({
     });
     setSending(false);
     if (result.ok) {
+      const rejected = result.data.rejected ?? [];
+      if (rejected.length > 0) {
+        toast.warning(
+          `Sent, but the mail server refused ${rejected.join(', ')}. Check the address and send again.`,
+        );
+      }
       onSent();
       onClose();
     } else {

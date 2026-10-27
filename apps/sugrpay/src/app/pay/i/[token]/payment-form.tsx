@@ -163,6 +163,29 @@ export function PaymentForm({
     return body;
   }
 
+  /** For a gateway with nothing to do in the browser — the local fake
+   * gateway, which settles, declines or leaves pending on the server alone.
+   * With Stripe, ACH and Wallet use their own forms below instead. */
+  async function submitServerSide(method: 'ACH' | 'WALLET') {
+    setStep({ kind: 'processing' });
+    try {
+      const body = await createIntent(method);
+      if (body.gatewayStatus === 'SUCCEEDED') setStep({ kind: 'success' });
+      else if (body.gatewayStatus === 'FAILED') {
+        setStep({ kind: 'failure', reason: body.declineReason ?? null });
+      } else setStep({ kind: 'pending' });
+    } catch (error) {
+      setStep({
+        kind: 'error',
+        message: error instanceof Error ? error.message : 'The network request failed.',
+      });
+    }
+  }
+
+  // Stripe's browser step (bank sign-in, Apple Pay / Google Pay sheet) needs
+  // the brand's connected Stripe account.
+  const hasStripe = Boolean(invoice.stripePublishableKey && invoice.stripeAccountId);
+
   return (
     <div>
       <p className="text-sm font-bold text-ink-strong">Choose how to pay</p>
@@ -222,6 +245,15 @@ export function PaymentForm({
           amountLabel={amountLabel}
           onSubmitted={() => setStep({ kind: 'checkSubmitted' })}
         />
+      ) : chosen && !hasStripe ? (
+        <button
+          type="button"
+          onClick={() => void submitServerSide(chosen.key as 'ACH' | 'WALLET')}
+          style={{ backgroundColor: invoice.accentColor }}
+          className="mt-5 w-full rounded-lg py-3 text-sm font-bold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
+        >
+          Pay {amountLabel}
+        </button>
       ) : chosen?.key === 'ACH' ? (
         <AchBankTransferForm
           publishableKey={invoice.stripePublishableKey}
@@ -325,9 +357,9 @@ function Outcome({ step, onRetry }: { step: Step; onRetry: () => void }) {
       <div className="rounded-lg border border-[#E5E7EB] bg-surface-muted px-4 py-6 text-center">
         <p className="text-sm font-bold text-ink-strong">Verify your bank account</p>
         <p className="mt-1 text-xs text-ink-muted">
-          We couldn&rsquo;t verify that account instantly. Two small deposits (or a short code) will arrive
-          in your account within 1&ndash;2 business days &mdash; once they do, use the link below to finish
-          verifying and complete this payment.
+          We couldn&rsquo;t verify that account instantly. Two small deposits (or a short code) will
+          arrive in your account within 1&ndash;2 business days &mdash; once they do, use the link
+          below to finish verifying and complete this payment.
         </p>
         {step.hostedVerificationUrl && (
           <a

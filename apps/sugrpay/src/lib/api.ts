@@ -746,6 +746,9 @@ export interface InvoiceActivityEntry {
   toStatus: string | null;
   actor: string;
   occurredAt: string;
+  /** A short human line for events that need one — the refused or bounced
+   * address for an email problem. Null for everything else. */
+  detail: string | null;
 }
 
 export function getInvoiceEvents(brandId: string, id: string): Promise<InvoiceActivityEntry[]> {
@@ -789,12 +792,19 @@ export interface InvoiceEmailSendInput {
 /** The Send/Resend compose modal's actual submit — sends exactly what's on
  * screen (not a status change; issueInvoice owns the draft → sent
  * transition, called separately first when this is a first send). */
+/** `rejected` lists addresses the mail server refused while still sending
+ * to the rest (e.g. a mistyped CC). Empty when everyone was accepted. */
+export interface InvoiceEmailSendResult {
+  sent: true;
+  rejected: string[];
+}
+
 export function sendInvoiceEmail(
   brandId: string,
   id: string,
   input: InvoiceEmailSendInput,
-): Promise<{ sent: true }> {
-  return apiFetch<{ sent: true }>(`/brands/${brandId}/invoices/${id}/send-email`, {
+): Promise<InvoiceEmailSendResult> {
+  return apiFetch<InvoiceEmailSendResult>(`/brands/${brandId}/invoices/${id}/send-email`, {
     method: 'POST',
     body: JSON.stringify(input),
   });
