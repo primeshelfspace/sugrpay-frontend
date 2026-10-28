@@ -42,7 +42,9 @@ export default async function InvoicesPage({
   const params = await searchParams;
   const tab = params.tab ?? 'all';
   const search = params.search ?? '';
-  const range = params.range ?? '90';
+  // All time by default: invoices imported from Zoho keep their own dates,
+  // and a 90-day default hid every older one behind the filter.
+  const range = params.range ?? 'all';
   const { page, pageSize } = parsePageParams(params);
   const dateRange = { from: invoiceRangeCutoffIso(range) };
 
