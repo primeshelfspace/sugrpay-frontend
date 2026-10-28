@@ -175,7 +175,7 @@ export function InvoicesPageClient({
   }
 
   function onRangeChange(key: string) {
-    pushParams({ range: key === '90' ? null : key, page: null });
+    pushParams({ range: key === 'all' ? null : key, page: null });
     setRangeMenuOpen(false);
   }
 
@@ -193,8 +193,7 @@ export function InvoicesPageClient({
   );
 
   const currency = toCurrencyCode(brand?.currency);
-  const activeRangeLabel =
-    INVOICE_RANGE_OPTIONS.find((r) => r.key === range)?.label ?? 'Last 90 days';
+  const activeRangeLabel = INVOICE_RANGE_OPTIONS.find((r) => r.key === range)?.label ?? 'All time';
 
   // "Bulk Send Invoices" row selection — sendable rows only (see
   // isBulkSendable); pruned to whatever the current tab/search/range still
