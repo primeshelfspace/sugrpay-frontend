@@ -1,9 +1,10 @@
 import { Check } from 'lucide-react';
 import { LogoMark } from '@/components/logo-mark';
+import { logoutAction } from '@/accounts/lib/logout-action';
 import { ONBOARDING_STEPS, type OnboardingStepLabel } from '@/components/onboarding-steps';
 
 /**
- * The top bar shown across the Company → Structure → Brand onboarding wizard:
+ * The top bar shown across the Company → Brand → Products onboarding wizard:
  * the brand mark pinned to the left, and the step stepper centered on the
  * full page width (not just the remaining space beside the logo).
  *
@@ -71,6 +72,13 @@ export function OnboardingHeader({
           );
         })}
       </ol>
+      {/* Signing out is how a person leaves onboarding to work with another
+          company (one account, one company). */}
+      <form action={logoutAction} className="absolute right-5 top-1/2 -translate-y-1/2">
+        <button type="submit" className="text-sm font-semibold text-[#0F172A] underline">
+          Sign out
+        </button>
+      </form>
     </header>
   );
 }

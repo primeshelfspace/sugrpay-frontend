@@ -95,11 +95,11 @@ export default async function AuthenticatedLayout({ children }: { children: Reac
     redirect(routeForStep(step));
   }
 
-  // The sidebar header names the merchant, not any one brand. Reaching here
-  // means step was null, which only happens once merchant.onboardingComplete
-  // is true — so merchant is always set by this point; the fallback name is
-  // for TypeScript's benefit, not a real runtime path.
-  const companyName = merchant?.companyDetails?.legalName ?? 'Sugrpay';
+  // The sidebar header names the company (its Company Name from Register Your
+  // Company), not any one brand. Reaching here means onboarding is complete,
+  // so merchant is always set by this point; the fallbacks are for companies
+  // that registered before Company Name existed, and for TypeScript.
+  const companyName = merchant?.company.companyName ?? merchant?.company.legalName ?? 'Sugrpay';
 
   return (
     <Suspense fallback={null}>

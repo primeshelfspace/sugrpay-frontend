@@ -115,12 +115,107 @@ export function login(email: string, password: string): Promise<LoginResponse> {
   });
 }
 
-export function register(fullName: string, email: string): Promise<{ ok: true }> {
+/** Sign Up: signs the new Company Admin in, like login. */
+export function register(
+  email: string,
+  password: string,
+): Promise<LoginResponse & { nextStep: OnboardingStep }> {
   return apiFetch('/auth/register', {
     method: 'POST',
-    body: JSON.stringify({ fullName, email }),
+    body: JSON.stringify({ email, password }),
     token: null,
   });
+}
+
+/** The message for each field the API refused (400 validation, 409 with a
+ * field), keyed by field name. */
+export function fieldErrorsOf(error: unknown): Record<string, string> {
+  const issues =
+    error instanceof ApiError
+      ? (error.body as { issues?: Array<{ path?: string; message?: string }> } | null)?.issues
+      : undefined;
+  const out: Record<string, string> = {};
+  for (const issue of issues ?? []) {
+    const field = String(issue.path ?? '').split('.')[0] ?? '';
+    if (field && issue.message && !out[field]) out[field] = issue.message;
+  }
+  return out;
+}
+
+/** The rule a 409 names (EMAIL_TAKEN, COMPANY_NAME_TAKEN, ...). */
+export function conflictCodeOf(error: unknown): string | null {
+  if (!(error instanceof ApiError) || error.status !== 409) return null;
+  return (error.body as { code?: string } | null)?.code ?? null;
+}
+
+// --- Company onboarding -------------------------------------------------------
+
+export type OnboardingStep = 'REGISTER_COMPANY' | 'ADD_BRAND' | 'SELECT_PRODUCTS';
+
+export interface OnboardingState {
+  nextStep: OnboardingStep;
+  onboardingComplete: boolean;
+  company: {
+    companyName: string | null;
+    legalName: string | null;
+    taxId: string | null;
+    contactEmail: string;
+    brandStructure: 'SINGLE' | 'MULTI' | null;
+    registeredAt: string | null;
+  };
+  hasBrands: boolean;
+}
+
+export function getOnboarding(token?: string | null): Promise<OnboardingState> {
+  return apiFetch('/merchant/onboarding', token === undefined ? {} : { token });
+}
+
+export function registerCompany(input: {
+  companyName: string;
+  legalName: string;
+  taxId: string;
+  brandStructure: 'SINGLE' | 'MULTI';
+}): Promise<{ nextStep: OnboardingStep }> {
+  return apiFetch('/merchant/register-company', { method: 'POST', body: JSON.stringify(input) });
+}
+
+export function addFirstBrand(input: {
+  legalName: string;
+  displayName: string;
+  currency: string;
+  timezone: string;
+  themeColor: string | null;
+}): Promise<{ brand: { id: string; displayName: string }; nextStep: OnboardingStep }> {
+  return apiFetch('/merchant/first-brand', { method: 'POST', body: JSON.stringify(input) });
+}
+
+export interface ProductCard {
+  product: Product;
+  name: string;
+  description: string;
+  enabled: boolean;
+  canEnable: boolean;
+}
+
+export interface ProductsView {
+  products: ProductCard[];
+  onboardingComplete: boolean;
+}
+
+export function listProducts(): Promise<ProductsView> {
+  return apiFetch('/company/products');
+}
+
+export function enableProducts(
+  products: Product[],
+): Promise<ProductsView & { continueWith: Product | null }> {
+  return apiFetch('/company/products', { method: 'POST', body: JSON.stringify({ products }) });
+}
+
+export function continueIntoProduct(
+  product: Product,
+): Promise<{ product: Product; url: string; token: string; expiresAt: string }> {
+  return apiFetch(`/company/products/${product}/continue`, { method: 'POST' });
 }
 
 export function setPasswordWithToken(token: string, newPassword: string): Promise<LoginResponse> {

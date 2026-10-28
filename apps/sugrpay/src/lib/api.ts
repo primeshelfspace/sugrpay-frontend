@@ -356,81 +356,25 @@ export function uploadBrandLogo(brandId: string, file: File): Promise<{ logoUrl:
 
 // --- Merchant onboarding (FR-ONB) ---------------------------------------------
 
-/** A brand has no meaning until a merchant decides whether it operates one
- * or several — these are staged directly on the merchant, not a Brand,
- * because no Brand may exist yet when this is collected. */
-export interface CompanyDetails {
-  legalName: string;
-  dba: string | null;
-  businessType: BusinessType | null;
-  phone: string | null;
-  email: string | null;
-  website: string | null;
-  mailingAddress: CustomerAddress | null;
-  billingAddress: CustomerAddress | null;
-  taxId: string | null;
-  hasLogo: boolean;
-}
-
+/** Where the company's onboarding stands (docs/product/stories/company-onboarding.md
+ * in the platform repository). The step is worked out by the API. */
 export interface MerchantOnboardingState {
-  /** Null until setCompanyDetails has been called at least once. */
-  companyDetails: CompanyDetails | null;
-  /** Null until chooseBrandStructure has been called. */
-  brandStructure: 'SINGLE' | 'MULTI' | null;
-  hasBrands: boolean;
-  /** SINGLE sets this the instant its one brand is created. MULTI leaves it
-   * false until completeMultiBrandOnboarding is called — how many brands a
-   * MULTI merchant intends to add isn't implied by any count of brands. */
+  nextStep: 'REGISTER_COMPANY' | 'ADD_BRAND' | 'SELECT_PRODUCTS';
   onboardingComplete: boolean;
+  company: {
+    companyName: string | null;
+    legalName: string | null;
+    taxId: string | null;
+    contactEmail: string;
+    brandStructure: 'SINGLE' | 'MULTI' | null;
+    registeredAt: string | null;
+  };
+  hasBrands: boolean;
 }
 
 export const getMerchantOnboarding = cache((): Promise<MerchantOnboardingState> =>
   apiFetch<MerchantOnboardingState>('/merchant/onboarding'),
 );
-
-export interface CompanyDetailsFormInput {
-  legalName: string;
-  dba: string | null;
-  businessType: BusinessType;
-  phone: string | null;
-  email: string | null;
-  website: string | null;
-  mailingAddress: CustomerAddress | null;
-  billingAddress: CustomerAddress | null;
-  taxId: string | null;
-}
-
-export function saveCompanyDetails(input: CompanyDetailsFormInput): Promise<{ ok: true }> {
-  return apiFetch<{ ok: true }>('/merchant/company-details', {
-    method: 'PATCH',
-    body: JSON.stringify(input),
-  });
-}
-
-export function uploadCompanyLogo(file: File): Promise<{ logoUrl: string }> {
-  return apiUploadFetch('/merchant/logo', file);
-}
-
-export interface ChooseBrandStructureResult {
-  /** Populated only for SINGLE — the one brand just created from the staged
-   * company details. Null for MULTI, which creates no brand by itself. */
-  brand: { id: string; displayName: string } | null;
-}
-
-export function chooseBrandStructure(
-  structure: 'SINGLE' | 'MULTI',
-): Promise<ChooseBrandStructureResult> {
-  return apiFetch<ChooseBrandStructureResult>('/merchant/brand-structure', {
-    method: 'POST',
-    body: JSON.stringify({ structure }),
-  });
-}
-
-/** MULTI's own "I'm done adding brands" action — rejected by the API if no
- * brand has been created yet. */
-export function completeMultiBrandOnboarding(): Promise<{ ok: true }> {
-  return apiFetch<{ ok: true }>('/merchant/complete-onboarding', { method: 'POST' });
-}
 
 // --- Customers (FR-CUS) ------------------------------------------------------
 

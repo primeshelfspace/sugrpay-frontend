@@ -6,42 +6,24 @@ import {
   type MerchantOnboardingState,
 } from './api';
 import { LOGIN_PATH, readSessionToken } from './session';
-import { hasPermission } from './permissions';
 
 /**
- * Onboarding, FR-ONB. The current step is never stored as its own flag — it
- * is computed live from real rows (user status, staged merchant fields,
- * brand count) every time, so it can never drift out of sync with what
- * actually happened. `null` means onboarding is complete.
+ * What stands between a signed-in user and the Sugrpay app. Company
+ * onboarding itself (Register Your Company, Add Your Brand, Select Your
+ * Products) lives in Accounts; this only sends people there until it is done.
+ * The step is never kept here: the API works it out from the company's data
+ * (GET /merchant/onboarding). `null` means onboarding is complete.
  *
- * `awaiting-setup` is not a step anyone performs. It is where a user lands
- * when the merchant still owes onboarding but their own role cannot complete
- * it — see resolveOnboardingStep.
+ * `awaiting-setup` is not a step anyone performs: it is where a user lands
+ * while the company still owes onboarding and they are not the Company Admin,
+ * the only one who can complete it.
  */
 export type OnboardingStep =
-  | 'set-password'
-  | 'company-details'
-  | 'brand-structure'
-  | 'multi-brand-setup'
-  | 'awaiting-setup'
-  | null;
-
-/** Every brand-shaped onboarding step writes through an endpoint gated on
- * BRANDS WRITE, which FRS-001 §3.3 grants to Owner and Merchant Admin only.
- * Read off the shared matrix rather than restated here, so a matrix change
- * moves this with it. */
-const BRAND_SETUP_STEPS: ReadonlySet<OnboardingStep> = new Set<OnboardingStep>([
-  'company-details',
-  'brand-structure',
-  'multi-brand-setup',
-]);
+  'set-password' | 'REGISTER_COMPANY' | 'ADD_BRAND' | 'SELECT_PRODUCTS' | 'awaiting-setup' | null;
 
 /**
- * `prefetchedMerchant` lets a caller that already needs the merchant record
- * for its own purposes (the authenticated layout, for its sidebar header)
- * pass it in instead of this function fetching it again — otherwise every
- * navigation would hit /merchant/onboarding twice. Every other caller omits
- * it and this fetches its own, exactly as before.
+ * `prefetchedMerchant` lets a caller that already has the onboarding record
+ * (the authenticated layout) pass it in instead of this fetching it again.
  */
 export async function resolveOnboardingStep(
   user: CurrentUser,
@@ -53,49 +35,21 @@ export async function resolveOnboardingStep(
 
   const merchant = prefetchedMerchant ?? (await getMerchantOnboarding());
   if (merchant.onboardingComplete) return null;
-
-  const step = resolveSetupStep(merchant);
-
-  // Sending a user to a form whose endpoint will refuse them is a dead end,
-  // not a prompt: every other route bounces them back here, so they cannot
-  // reach the app at all and cannot fix it themselves either. Tell them who
-  // can instead.
-  if (BRAND_SETUP_STEPS.has(step) && !hasPermission(user, 'BRANDS', 'WRITE')) {
-    return 'awaiting-setup';
-  }
-  return step;
-}
-
-/**
- * `hasBrands` is deliberately consulted before `companyDetails`. Company
- * details exist to seed a merchant's *first* brand, so asking a merchant that
- * already has brands to "create your first brand" is both wrong on its face
- * and actively harmful — single-brand structure would mint a duplicate from
- * those staged details. A merchant that already has brands only owes the
- * structure decision.
- */
-function resolveSetupStep(merchant: {
-  companyDetails: unknown;
-  brandStructure: 'SINGLE' | 'MULTI' | null;
-  hasBrands: boolean;
-}): Exclude<OnboardingStep, 'set-password' | 'awaiting-setup' | null> {
-  if (!merchant.brandStructure) {
-    return !merchant.companyDetails && !merchant.hasBrands ? 'company-details' : 'brand-structure';
-  }
-  // MULTI has no brand-count shortcut to completion — see completeMultiBrandOnboarding.
-  return 'multi-brand-setup';
+  // Only the Company Admin (the person who signed up) completes onboarding.
+  if (user.role !== 'MERCHANT_OWNER') return 'awaiting-setup';
+  return merchant.nextStep;
 }
 
 export function routeForStep(step: OnboardingStep): string {
   switch (step) {
     case 'set-password':
       return '/set-password';
-    case 'company-details':
-      return '/brands/new';
-    case 'brand-structure':
-      return '/brands/structure';
-    case 'multi-brand-setup':
-      return '/brands/multi';
+    case 'REGISTER_COMPANY':
+      return '/accounts/register-company';
+    case 'ADD_BRAND':
+      return '/accounts/add-brand';
+    case 'SELECT_PRODUCTS':
+      return '/accounts';
     case 'awaiting-setup':
       return '/awaiting-setup';
     case null:
@@ -104,69 +58,24 @@ export function routeForStep(step: OnboardingStep): string {
 }
 
 /**
- * The one guard every onboarding page calls. Redirects to /login if there is
- * no session at all, to the actual current step if the caller is on the
- * wrong page (skip-ahead or stale bookmark), and returns the signed-in user
- * otherwise. Never returns for a page whose step doesn't match — `redirect`
- * throws, so nothing after the call to this function runs.
+ * The guard of the one onboarding page left in this app, awaiting-setup.
+ * Signed out: to sign in. Anyone whose step is not this one: to their step.
+ * Never returns for a mismatch — `redirect` throws.
  */
 export async function requireOnboardingStep(
   step: Exclude<OnboardingStep, null>,
 ): Promise<CurrentUser> {
-  const user = await requireSignedInUser(routeForStep(step));
-
-  const actual = await resolveOnboardingStepOrRedirect(user);
-  if (actual !== step) {
-    redirect(routeForStep(actual));
-  }
-
-  return user;
-}
-
-/** Guards /brands/created specifically: reachable only once onboarding is
- * actually complete. Anyone else finding their way here (no session, or
- * onboarding still incomplete) is sent somewhere that means something. */
-export async function requireOnboardingComplete(): Promise<CurrentUser> {
-  const user = await requireSignedInUser('/brands/created');
-
-  const actual = await resolveOnboardingStepOrRedirect(user);
-  if (actual !== null) {
-    redirect(routeForStep(actual));
-  }
-
-  return user;
-}
-
-/**
- * Shared by both guards above. resolveOnboardingStep hits the API
- * (getMerchantOnboarding), and every onboarding page calls one of these two
- * guards before rendering anything of its own — so an unguarded call here
- * meant a momentary API hiccup fell through to the root error boundary and
- * showed "Something went wrong" on every single onboarding step, the same
- * failure mode already fixed for the post-onboarding layout. Failing the
- * same way requireSignedInUser's own getCurrentUser call does — back to
- * /login — since we genuinely cannot tell which step this user belongs on.
- */
-async function resolveOnboardingStepOrRedirect(user: CurrentUser): Promise<OnboardingStep> {
-  try {
-    return await resolveOnboardingStep(user);
-  } catch {
-    redirect(`${LOGIN_PATH}?expired=1`);
-  }
-}
-
-/**
- * Shared by both guards above: no session at all goes to /login carrying the
- * destination it was trying to reach; a session the API will not honour goes
- * there flagged expired.
- */
-async function requireSignedInUser(destination: string): Promise<CurrentUser> {
   if (!(await readSessionToken())) {
-    redirect(`${LOGIN_PATH}?next=${encodeURIComponent(destination)}`);
+    redirect(`${LOGIN_PATH}?next=${encodeURIComponent(routeForStep(step))}`);
   }
+  let user: CurrentUser;
+  let actual: OnboardingStep;
   try {
-    return await getCurrentUser();
+    user = await getCurrentUser();
+    actual = await resolveOnboardingStep(user);
   } catch {
     redirect(`${LOGIN_PATH}?expired=1`);
   }
+  if (actual !== step) redirect(routeForStep(actual));
+  return user;
 }

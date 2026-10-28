@@ -10,7 +10,7 @@ import { useCan } from '@/hooks/use-permissions';
  * them one — RLS only ever returns their own assignments — and a "create
  * your first brand" link would lead somewhere they cannot use.
  */
-export function NoBrandsState({ createHref = '/brands/new' }: { createHref?: string }) {
+export function NoBrandsState({ createHref = '/accounts/brands' }: { createHref?: string }) {
   const canCreateBrand = useCan('BRANDS', 'WRITE');
 
   return (

@@ -1,72 +1,78 @@
 'use server';
 
 import { redirect } from 'next/navigation';
-import { emailSchema } from '@platform/kernel';
-import { ApiError, register } from '@/accounts/lib/api';
+import { registerSchema } from '@platform/platform-contracts';
+import { ApiError, conflictCodeOf, fieldErrorsOf, register } from '@/accounts/lib/api';
+import { routeForStep } from '@/accounts/lib/onboarding';
+import { writeSessionToken } from '@/accounts/lib/session';
 
 export interface SignupState {
   readonly error?: string;
-  /** Kept so the fields are not cleared under the user when the attempt fails. */
-  readonly fullName?: string;
+  /** A message per field: email, password. */
+  readonly fieldErrors?: Readonly<Record<string, string>>;
+  /** Kept so the email is not cleared under the user when the attempt fails. */
   readonly email?: string;
 }
 
 /**
- * FR-ONB step 0. Creates the tenant and its owner, then signs them in.
+ * Sign Up: a company email and a password. The person becomes the Company
+ * Admin and is signed in, then goes on to Register Your Company.
  *
- * There is no password field and no session: the API emails a set-password
- * link, and proving control of that address is what turns the account into a
- * usable one. Following the link lands on /set-password, then the product
- * launcher; opening Sugrpay continues its own setup (company details, brand
- * structure, dashboard).
+ * Validated here with the API's own schema before the call (a request can
+ * arrive without the form's JavaScript having run), and again by the API,
+ * whose answer wins: it alone knows whether the email is taken.
  */
 export async function signupAction(
   _prevState: SignupState,
   formData: FormData,
 ): Promise<SignupState> {
-  const fullName = String(formData.get('fullName') ?? '').trim();
   const email = String(formData.get('email') ?? '').trim();
+  const password = String(formData.get('password') ?? '');
 
-  if (!fullName) return { error: 'Enter your full name.', fullName, email };
-  // The form validates this too, but a request can always arrive without
-  // having run that JS — the server is the check that actually holds.
-  if (!emailSchema.safeParse(email).success) {
-    return { error: 'Enter a valid email address.', fullName, email };
-  }
-
-  // A second attempt guards against a one-off network-level drop (a dev-server
-  // recompile interrupting the in-flight request, a brief connection reset)
-  // rather than the service actually being unreachable. Retrying is safe:
-  // register() is keyed by email and answers 409 if the first attempt already
-  // landed server-side, so a retry after a lost response degrades to the
-  // "already exists" message below instead of a duplicate account.
-  const MAX_ATTEMPTS = 2;
-  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
-    try {
-      await register(fullName, email);
-      break;
-    } catch (error) {
-      if (error instanceof ApiError) {
-        // 409 is the one failure worth naming: the address is already taken, and
-        // the useful next step is signing in rather than trying again.
-        if (error.status === 409) {
-          return {
-            error: 'An account with this email already exists. Sign in instead.',
-            fullName,
-            email,
-          };
-        }
-        return { error: error.message, fullName, email };
-      }
-      if (attempt === MAX_ATTEMPTS) {
-        return { error: 'Could not reach the sign-up service.', fullName, email };
-      }
+  const parsed = registerSchema.safeParse({ email, password });
+  if (!parsed.success) {
+    const fieldErrors: Record<string, string> = {};
+    for (const issue of parsed.error.issues) {
+      const field = String(issue.path[0] ?? '');
+      if (field && !fieldErrors[field]) fieldErrors[field] = sentence(issue.message);
     }
+    return { fieldErrors, email };
   }
 
-  // Outside the try/catch on purpose: redirect() signals by throwing, and
-  // catching it here would turn a successful sign-up into an error message.
-  // The address travels along only so the next screen can say which inbox to
-  // check; nothing is decided from it.
-  redirect(`/accounts/check-inbox?email=${encodeURIComponent(email)}`);
+  let result;
+  try {
+    result = await register(parsed.data.email, parsed.data.password);
+  } catch (error) {
+    if (conflictCodeOf(error) === 'EMAIL_TAKEN') {
+      return {
+        fieldErrors: { email: 'An account with this email already exists. Sign in instead.' },
+        email,
+      };
+    }
+    const fieldErrors = fieldErrorsOf(error);
+    if (Object.keys(fieldErrors).length > 0) {
+      return { fieldErrors: mapValues(fieldErrors, sentence), email };
+    }
+    if (error instanceof ApiError && error.status === 429) {
+      return { error: 'Too many sign-up attempts. Wait a few minutes, then try again.', email };
+    }
+    return { error: 'Sign-up is not working right now. Please try again in a minute.', email };
+  }
+
+  await writeSessionToken(result.token, new Date(result.expiresAt));
+  // Outside the try/catch on purpose: redirect() signals by throwing.
+  redirect(routeForStep(result.nextStep));
+}
+
+function sentence(message: string): string {
+  const trimmed = message.trim();
+  const capital = trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
+  return /[.!?]$/.test(capital) ? capital : `${capital}.`;
+}
+
+function mapValues(
+  record: Record<string, string>,
+  fn: (value: string) => string,
+): Record<string, string> {
+  return Object.fromEntries(Object.entries(record).map(([key, value]) => [key, fn(value)]));
 }
