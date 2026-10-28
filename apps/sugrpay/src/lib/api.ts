@@ -1275,6 +1275,9 @@ export interface ZohoActivityEntry {
   direction: 'PUSH' | 'PULL';
   objectType: string;
   objectId: string | null;
+  /** "78 contacts in 1 call, 78 saved" for a list scan, a customer name or
+   * invoice number for one record. Null on rows from before it existed. */
+  summary: string | null;
   status: string;
   errorClass: string | null;
   lastError: string | null;

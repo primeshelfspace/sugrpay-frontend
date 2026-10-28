@@ -78,16 +78,25 @@ function statusLabel(status: string): string {
   return 'Queued';
 }
 
-/** Neither a fabricated batch count nor invented create/update/delete
- * semantics — SyncJob records one row per object, not a batch, and tracks
- * push/pull direction, not a CRUD verb. This shows what's actually true for
- * each row: which direction it moved, and the record it moved. */
+/** No invented create/update/delete semantics — SyncJob tracks push/pull
+ * direction, not a CRUD verb. Each row is one Zoho call: which direction it
+ * moved, and (recordLabel) what it covered. */
 function eventLabel(entry: ZohoActivityEntry): string {
   const object = entry.objectType.charAt(0) + entry.objectType.slice(1).toLowerCase();
   return `${object} Sync`;
 }
 function actionLabel(entry: ZohoActivityEntry): string {
   return entry.direction === 'PUSH' ? 'Pushed' : 'Pulled';
+}
+/** What the row covered, in words. One row is one Zoho call: a list scan says
+ * how many records it brought in; a single record shows its name. Older rows
+ * have no summary and fall back to the full id (Zoho ids share their first
+ * digits, so a cut-off id made every row look the same). */
+function recordLabel(entry: ZohoActivityEntry): string {
+  if (entry.summary) return entry.summary;
+  if (entry.objectId === 'list') return 'Full list';
+  if (entry.objectId === 'reconcile') return 'Deletion check';
+  return entry.objectId ?? '—';
 }
 
 /** A fixed locale, not the runtime's default — this renders once on the
@@ -543,9 +552,7 @@ function ZohoDetail({
                         </td>
                         <td className="px-5 py-3 text-ink-strong">{eventLabel(entry)}</td>
                         <td className="px-5 py-3 text-ink-muted">{actionLabel(entry)}</td>
-                        <td className="whitespace-nowrap px-5 py-3 font-mono text-xs text-ink-muted">
-                          {entry.objectId ? entry.objectId.slice(0, 8) : '—'}
-                        </td>
+                        <td className="px-5 py-3 text-ink-muted">{recordLabel(entry)}</td>
                         <td
                           className="whitespace-nowrap px-5 py-3 sm:pr-6"
                           title={entry.lastError ?? undefined}
