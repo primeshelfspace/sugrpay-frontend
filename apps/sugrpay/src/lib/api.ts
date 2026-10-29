@@ -1187,11 +1187,15 @@ export function getZohoStatus(brandId: string): Promise<ZohoConnectionStatus> {
   return apiFetch<ZohoConnectionStatus>(`/brands/${brandId}/integrations/zoho/status`);
 }
 
+/** Sync Frequency, minutes between timed pulls; 0 is Real-time (webhooks
+ * only). Mirrors ZOHO_SYNC_FREQUENCIES. */
+export type ZohoSyncFrequency = 0 | 15 | 30 | 60 | 1440 | 43200;
+
 /** Mirrors zohoSyncSettingsSchema — every field optional, at least one
  * required. Applied the moment a control changes; there is no batching
  * "Save" step for this to accumulate into. */
 export interface ZohoSyncSettingsPatch {
-  pullFrequencyMinutes?: 1 | 15 | 60 | 1440;
+  pullFrequencyMinutes?: ZohoSyncFrequency;
   customerSyncEnabled?: boolean;
   invoiceSyncEnabled?: boolean;
 }

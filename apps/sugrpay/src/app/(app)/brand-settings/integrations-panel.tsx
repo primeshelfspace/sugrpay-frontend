@@ -22,6 +22,7 @@ import type {
   ZohoSandbox,
   ZohoSandboxChange,
   ZohoSyncSettingsPatch,
+  ZohoSyncFrequency,
   ZohoWebhookSetup,
 } from '@/lib/api';
 import { Toggle } from '@/components/ui/toggle';
@@ -43,11 +44,36 @@ import {
 
 const POLL_INTERVAL_MS = 4000;
 
-const FREQUENCY_OPTIONS: { readonly value: 1 | 15 | 60 | 1440; readonly label: string }[] = [
-  { value: 1, label: 'Realtime' },
-  { value: 15, label: 'Every 15 minutes' },
-  { value: 60, label: 'Hourly' },
-  { value: 1440, label: 'Daily' },
+/** Sync Frequency. Real-time pulls nothing on a timer: Zoho's webhooks
+ * bring changes within seconds. The others also pull everything from Zoho on
+ * that interval, a safety net for webhooks Zoho fails to deliver. */
+const FREQUENCY_OPTIONS: {
+  readonly value: ZohoSyncFrequency;
+  readonly label: string;
+  readonly hint: string;
+}[] = [
+  {
+    value: 0,
+    label: 'Real-time',
+    hint: 'Changes made in Zoho Books arrive within seconds through the Real-time Webhooks below. No timed sync.',
+  },
+  {
+    value: 15,
+    label: 'Every 15 minutes',
+    hint: 'Webhooks, plus a full sync from Zoho every 15 minutes.',
+  },
+  {
+    value: 30,
+    label: 'Every 30 minutes',
+    hint: 'Webhooks, plus a full sync from Zoho every 30 minutes.',
+  },
+  { value: 60, label: 'Hourly', hint: 'Webhooks, plus a full sync from Zoho every hour.' },
+  { value: 1440, label: 'Daily', hint: 'Webhooks, plus a full sync from Zoho once a day.' },
+  {
+    value: 43200,
+    label: 'Monthly',
+    hint: 'Webhooks, plus a full sync from Zoho once every 30 days.',
+  },
 ];
 
 function statusDotClass(status: string): string {
@@ -338,7 +364,7 @@ function ZohoDetail({
         lastSyncAt: null,
         lastPulledAt: null,
         health: null,
-        pullFrequencyMinutes: 15,
+        pullFrequencyMinutes: 0,
         customerSyncEnabled: true,
         invoiceSyncEnabled: true,
       });
@@ -404,51 +430,52 @@ function ZohoDetail({
           <div className="grid gap-6 sm:grid-cols-2">
             <section className="rounded-xl border border-border bg-surface p-5 shadow-sm sm:p-6">
               <h3 className="text-base font-bold text-ink-strong">Sync Frequency</h3>
-              {!status.scheduledPullEnabled ? (
-                <p className="mt-1 text-sm text-ink-muted">
-                  Changes made in Zoho Books arrive through the Real-time Webhooks below, within
-                  seconds — there is no timed sync. Use Manual Resync in the Connection Log for a
-                  full refresh. Changes made here are sent to Zoho Books as they happen.
+              <p className="mt-1 text-sm text-ink-muted">
+                How changes made in Zoho Books reach {brandDisplayName}. Changes made here are sent
+                to Zoho Books as they happen.
+              </p>
+              <div className="relative mt-4">
+                <select
+                  aria-label="Sync frequency"
+                  value={status.pullFrequencyMinutes}
+                  disabled={!canWrite || savingField === 'pullFrequencyMinutes'}
+                  onChange={(event) => {
+                    const value = Number(event.target.value) as ZohoSyncFrequency;
+                    void saveSetting(
+                      'pullFrequencyMinutes',
+                      { pullFrequencyMinutes: value },
+                      { pullFrequencyMinutes: value },
+                    );
+                  }}
+                  className="w-full appearance-none rounded-[10px] border border-border bg-white px-4 py-3 pr-10 text-base text-ink-strong disabled:opacity-60"
+                >
+                  {FREQUENCY_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+                {savingField === 'pullFrequencyMinutes' ? (
+                  <Loader2
+                    className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-ink-muted"
+                    aria-hidden
+                  />
+                ) : (
+                  <ChevronDown
+                    className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-muted"
+                    aria-hidden
+                  />
+                )}
+              </div>
+              <p className="mt-2 text-sm text-ink-muted">
+                {FREQUENCY_OPTIONS.find((opt) => opt.value === status.pullFrequencyMinutes)?.hint ??
+                  'Use Manual Resync in the Connection Log for a full refresh.'}
+              </p>
+              {!status.scheduledPullEnabled && status.pullFrequencyMinutes > 0 && (
+                <p className="mt-2 rounded-md bg-warning-surface px-3 py-2 text-sm text-warning">
+                  Timed syncs are paused on this server for now. Real-time webhooks and Manual
+                  Resync still work.
                 </p>
-              ) : (
-                <>
-                  <p className="mt-1 text-sm text-ink-muted">
-                    How often this brand pulls data and pushes invoices/payments to Zoho Books.
-                  </p>
-                  <div className="relative mt-4">
-                    <select
-                      aria-label="Sync frequency"
-                      value={status.pullFrequencyMinutes}
-                      disabled={!canWrite || savingField === 'pullFrequencyMinutes'}
-                      onChange={(event) => {
-                        const value = Number(event.target.value) as 1 | 15 | 60 | 1440;
-                        void saveSetting(
-                          'pullFrequencyMinutes',
-                          { pullFrequencyMinutes: value },
-                          { pullFrequencyMinutes: value },
-                        );
-                      }}
-                      className="w-full appearance-none rounded-[10px] border border-border bg-white px-4 py-3 pr-10 text-base text-ink-strong disabled:opacity-60"
-                    >
-                      {FREQUENCY_OPTIONS.map((opt) => (
-                        <option key={opt.value} value={opt.value}>
-                          {opt.label}
-                        </option>
-                      ))}
-                    </select>
-                    {savingField === 'pullFrequencyMinutes' ? (
-                      <Loader2
-                        className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-ink-muted"
-                        aria-hidden
-                      />
-                    ) : (
-                      <ChevronDown
-                        className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-muted"
-                        aria-hidden
-                      />
-                    )}
-                  </div>
-                </>
               )}
             </section>
 
