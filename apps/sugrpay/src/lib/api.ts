@@ -1420,10 +1420,14 @@ export interface DashboardStatusBucket {
   percent: number;
 }
 
+/** Invoices dated in the period, by status (every invoice without one). */
 export function getDashboardStatusBreakdown(
   brandId: string | null,
+  range?: DashboardRange,
 ): Promise<DashboardStatusBucket[]> {
-  return apiFetch<DashboardStatusBucket[]>(`/dashboard/status-breakdown${dashboardQuery(brandId)}`);
+  return apiFetch<DashboardStatusBucket[]>(
+    `/dashboard/status-breakdown${dashboardQuery(brandId, range)}`,
+  );
 }
 
 export interface TopOverdueCustomer {
