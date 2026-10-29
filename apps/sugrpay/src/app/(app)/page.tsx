@@ -138,20 +138,10 @@ export default async function DashboardPage({
       integrationsConnected = integrationsStatus.connected;
       integrationsLastSyncAt = integrationsStatus.lastSyncAt;
       accountingDriverMismatch = integrationsStatus.accountingDriverMismatch ?? false;
-
-      // Without a live integration there's nothing trustworthy to report —
-      // show the same zero/empty state a brand new, never-synced brand gets,
-      // rather than stale numbers from before the connection dropped.
-      if (!integrationsConnected) {
-        summary = summary
-          ? { ...summary, invoicedMinor: 0, collectedMinor: 0, collectionRate: 0, overdueMinor: 0 }
-          : summary;
-        trend = [];
-        statusBreakdown = [];
-        topOverdueCustomers = [];
-        needsAttention = { items: [], totalCount: 0 };
-        recentActivity = [];
-      }
+      // Every figure here comes from this platform's own database, so it is
+      // shown whether or not Zoho Books is connected: invoices, payments and
+      // customers live here, Zoho is only kept in step with them. The banner
+      // below says whether Zoho is connected; it does not hide the data.
     } catch (cause) {
       dataError = cause instanceof ApiError ? cause.message : String(cause);
     }

@@ -28,7 +28,8 @@ export function IntegrationsStatusBanner({
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-[14px] border border-[#BFDBFE] bg-[#EFF6FF] px-4 py-2.5 text-sm">
         <span className="flex items-center gap-2 text-[#2563EB]">
           <Link2 className="h-4 w-4" aria-hidden />
-          Connect Integrations and Payment Gateway to start tracking invoices and payments.
+          Zoho Books is not connected. Your invoices and payments are tracked here; connect Zoho to
+          keep your books in sync.
         </span>
         <Link
           href={connectHref}
