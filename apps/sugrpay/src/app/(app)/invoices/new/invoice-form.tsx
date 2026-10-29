@@ -12,7 +12,7 @@ import { createInvoiceAction, type CreateInvoiceState } from './actions';
 
 const initialState: CreateInvoiceState = {};
 
-interface Row {
+export interface Row {
   itemName: string;
   description: string;
   quantity: string;
@@ -28,22 +28,41 @@ const emptyRow: Row = {
   taxExempt: false,
 };
 
+/** A draft being edited: its id and current values. */
+export interface InvoiceFormInitial {
+  readonly invoiceId: string;
+  readonly customerId: string;
+  readonly invoiceDate: string;
+  readonly dueDate: string;
+  readonly taxRatePercent: string;
+  readonly cardFeeRatePercent: string;
+  readonly notes: string;
+  readonly rows: Row[];
+}
+
 export function InvoiceForm({
   brandId,
   currency,
   customers,
+  initial,
 }: {
   brandId: string;
   /** The brand's own currency — the invoice is denominated in it. */
   currency: string;
   customers: Customer[];
+  /** Set when editing a draft: the form is filled in, and saving keeps it a
+   * draft rather than issuing it. */
+  initial?: InvoiceFormInitial;
 }) {
   const [state, formAction, pending] = useActionState(createInvoiceAction, initialState);
   useFormStatusToast(state);
-  const [rows, setRows] = useState<Row[]>([{ ...emptyRow }]);
+  const [rows, setRows] = useState<Row[]>(
+    initial?.rows.length ? initial.rows.map((row) => ({ ...row })) : [{ ...emptyRow }],
+  );
 
-  const today = new Date().toISOString().slice(0, 10);
-  const in30Days = new Date(Date.now() + 30 * 86_400_000).toISOString().slice(0, 10);
+  const today = initial?.invoiceDate ?? new Date().toISOString().slice(0, 10);
+  const in30Days =
+    initial?.dueDate ?? new Date(Date.now() + 30 * 86_400_000).toISOString().slice(0, 10);
 
   function updateRow(index: number, patch: Partial<Row>) {
     setRows((prev) => prev.map((row, i) => (i === index ? { ...row, ...patch } : row)));
@@ -54,11 +73,17 @@ export function InvoiceForm({
       <input type="hidden" name="brandId" value={brandId} />
       <input type="hidden" name="currency" value={currency} />
       <input type="hidden" name="lineCount" value={rows.length} />
+      {initial && <input type="hidden" name="invoiceId" value={initial.invoiceId} />}
 
       <div className="rounded-2xl border border-border bg-surface p-6 shadow-sm">
         <label className="block">
           <span className={labelClass}>Customer</span>
-          <select name="customerId" required className={inputClass} defaultValue="">
+          <select
+            name="customerId"
+            required
+            className={inputClass}
+            defaultValue={initial?.customerId ?? ''}
+          >
             <option value="" disabled>
               Choose a customer…
             </option>
@@ -101,7 +126,7 @@ export function InvoiceForm({
               step="0.01"
               min="0"
               name="taxRatePercent"
-              defaultValue="6"
+              defaultValue={initial?.taxRatePercent ?? '6'}
               className={inputClass}
             />
           </label>
@@ -112,7 +137,7 @@ export function InvoiceForm({
               step="0.01"
               min="0"
               name="cardFeeRatePercent"
-              defaultValue="2.9"
+              defaultValue={initial?.cardFeeRatePercent ?? '2.9'}
               className={inputClass}
             />
           </label>
@@ -201,7 +226,12 @@ export function InvoiceForm({
 
       <label className="block">
         <span className={labelClass}>Notes (optional, shown to the customer)</span>
-        <textarea name="notes" rows={2} className={inputClass} />
+        <textarea
+          name="notes"
+          rows={2}
+          className={inputClass}
+          defaultValue={initial?.notes ?? ''}
+        />
       </label>
 
       <div className="flex items-center gap-3">
@@ -210,7 +240,13 @@ export function InvoiceForm({
           disabled={pending}
           className="rounded-md bg-brand px-4 py-2 text-sm font-medium text-brand-foreground disabled:opacity-60"
         >
-          {pending ? 'Creating…' : 'Create & issue'}
+          {initial
+            ? pending
+              ? 'Saving…'
+              : 'Save draft'
+            : pending
+              ? 'Creating…'
+              : 'Create & issue'}
         </button>
         <a href={`/invoices?brandId=${brandId}`} className="text-sm text-ink-muted">
           Cancel
