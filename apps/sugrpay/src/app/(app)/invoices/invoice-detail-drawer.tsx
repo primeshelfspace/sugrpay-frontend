@@ -29,10 +29,9 @@ import {
 } from '@/lib/invoice-presentation';
 import { useDismissablePanel } from '@/hooks/use-dismissable-panel';
 import { useCan } from '@/hooks/use-permissions';
-import { cancelInvoiceAction } from './actions';
+import { cancelInvoiceAction, issueInvoiceAction } from './actions';
 import { RecordPaymentModal } from './record-payment-modal';
 import { SendInvoiceModal } from './send-invoice-modal';
-import { SUGRPAY_API_URL } from '@/lib/api-urls';
 
 /** Same "issued and still owing" states the API's RECORD_PAYMENT accepts. */
 const RECORDABLE_STATUSES = new Set(['SENT', 'VIEWED', 'PENDING_PAYMENT', 'PARTIALLY_PAID']);
@@ -141,13 +140,40 @@ export function InvoiceDetailDrawer({
 
   const status = invoice ? invoiceDetailStatus(invoice) : null;
   const currency = toCurrencyCode(invoice?.currency);
-  // Draft invoices have no active public token yet — same gate Download PDF
-  // already uses below, since a link to an inactive token 404s on arrival.
-  const shareUrl =
-    invoice && status !== 'DRAFT' ? `${PAYMENT_PUBLIC_URL}/i/${invoice.publicToken}` : null;
-  const shareMessage = invoice
-    ? `Invoice ${invoice.number} — ${formatMinorForDisplay(invoice.balanceMinor, currency)} due. View & pay: ${shareUrl}`
-    : '';
+  // A draft's payment link is not live yet (it would 404), so sharing a
+  // draft issues it first; see liveLink below.
+  const linkFor = (inv: { publicToken: string }) => `${PAYMENT_PUBLIC_URL}/i/${inv.publicToken}`;
+
+  const messageFor = (url: string, number: string) =>
+    `Invoice ${number} — ${formatMinorForDisplay(invoice?.balanceMinor ?? 0, currency)} due. View & pay: ${url}`;
+  // Copy Link and Share also show on a draft (for whoever may send it): a
+  // draft's link is not live yet, so using either first issues the invoice.
+  const canShare = Boolean(invoice) && (status !== 'DRAFT' || canSend);
+
+  /**
+   * The payment link, ready to hand out. For a draft, issues it first (after
+   * asking): it gets its final number, becomes Unpaid and its link goes live.
+   * Nothing is emailed. Null if the person says no or issuing fails.
+   */
+  async function liveLink(): Promise<{ url: string; number: string } | null> {
+    if (!invoice || !brand) return null;
+    if (status !== 'DRAFT') return { url: linkFor(invoice), number: invoice.number };
+    if (
+      !window.confirm(
+        'Sharing the link issues this invoice: it becomes Unpaid and the customer can pay it. ' +
+          'Nothing is emailed. Continue?',
+      )
+    ) {
+      return null;
+    }
+    const result = await issueInvoiceAction(brand.id, invoice.id);
+    if (!result.ok) {
+      toast.error(result.error);
+      return null;
+    }
+    handleSent();
+    return { url: linkFor(result.data), number: result.data.number };
+  }
 
   function handleSent() {
     router.refresh(); // the list row behind this drawer needs the new status too
@@ -183,21 +209,27 @@ export function InvoiceDetailDrawer({
   }
 
   async function handleCopyLink() {
-    if (!shareUrl) return;
+    const live = await liveLink();
+    if (!live) return;
     try {
-      await navigator.clipboard.writeText(shareUrl);
+      await navigator.clipboard.writeText(live.url);
       setLinkCopied(true);
-      toast.success('Link copied', { description: shareUrl });
+      toast.success('Link copied', { description: live.url });
       setTimeout(() => setLinkCopied(false), 2000);
     } catch {
       toast.error('Could not copy the link — copy it from your browser instead.');
     }
   }
 
-  function handleShareWhatsApp() {
-    if (!shareUrl) return;
-    window.open(`https://wa.me/?text=${encodeURIComponent(shareMessage)}`, '_blank', 'noopener');
+  async function handleShareWhatsApp() {
     setShareMenuOpen(false);
+    const live = await liveLink();
+    if (!live) return;
+    window.open(
+      `https://wa.me/?text=${encodeURIComponent(messageFor(live.url, live.number))}`,
+      '_blank',
+      'noopener',
+    );
   }
 
   // No direct Chatly deep-link/API exists to target yet, so this goes
@@ -206,8 +238,11 @@ export function InvoiceDetailDrawer({
   // Chatly-specific hint when that API isn't available (most desktop
   // browsers) or the user backs out of it without picking anything.
   async function handleShareChatly() {
-    if (!shareUrl) return;
     setShareMenuOpen(false);
+    const live = await liveLink();
+    if (!live) return;
+    const shareUrl = live.url;
+    const shareMessage = messageFor(live.url, live.number);
     if (navigator.share) {
       try {
         await navigator.share({
@@ -293,9 +328,9 @@ export function InvoiceDetailDrawer({
               invoice" points at (apps/api's public/invoices/:token/pdf) —
               draft invoices have no active public token yet, so this stays
               disabled until the invoice is actually sent. */}
-            {invoice && status !== 'DRAFT' ? (
+            {invoice && brand ? (
               <a
-                href={`${SUGRPAY_API_URL}/public/invoices/${invoice.publicToken}/pdf`}
+                href={`/invoices/pdf?brandId=${brand.id}&id=${invoice.id}`}
                 className="inline-flex h-9 items-center gap-2 rounded-lg border border-[#D4D4D4] bg-white px-4
                            text-sm font-bold text-ink-strong transition-colors hover:bg-surface-muted"
               >
@@ -306,7 +341,7 @@ export function InvoiceDetailDrawer({
               <button
                 type="button"
                 disabled
-                title={status === 'DRAFT' ? 'Send the invoice first to generate a PDF' : undefined}
+                title="Loading the invoice…"
                 className="inline-flex h-9 cursor-not-allowed items-center gap-2 rounded-lg border border-[#D4D4D4]
                            bg-white px-4 text-sm font-bold text-ink-muted opacity-60"
               >
@@ -314,7 +349,7 @@ export function InvoiceDetailDrawer({
                 Download PDF
               </button>
             )}
-            {shareUrl ? (
+            {canShare ? (
               <>
                 <button
                   type="button"
@@ -355,7 +390,7 @@ export function InvoiceDetailDrawer({
                       <button
                         type="button"
                         role="menuitem"
-                        onClick={handleShareWhatsApp}
+                        onClick={() => void handleShareWhatsApp()}
                         className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-ink-strong
                                    transition-colors hover:bg-[#F5F5F6]"
                       >
