@@ -540,6 +540,8 @@ export interface Invoice {
    * this exact invoice — null means it has never touched Zoho, whether or
    * not the brand is connected. */
   zohoInvoiceId: string | null;
+  /** Shown to the customer. */
+  notes?: string | null;
   lineItems: LineItem[];
   /** Only present on list rows — a single-invoice fetch has no need for it. */
   customer?: { displayName: string };
@@ -638,6 +640,19 @@ export interface InvoiceFormInput {
 export function createInvoice(brandId: string, input: InvoiceFormInput): Promise<Invoice> {
   return apiFetch<Invoice>(`/brands/${brandId}/invoices`, {
     method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+/** Edit a draft: the whole draft is replaced and recalculated by the API
+ * (409 NOT_A_DRAFT once issued). */
+export function updateInvoice(
+  brandId: string,
+  id: string,
+  input: InvoiceFormInput,
+): Promise<Invoice> {
+  return apiFetch<Invoice>(`/brands/${brandId}/invoices/${id}`, {
+    method: 'PUT',
     body: JSON.stringify(input),
   });
 }

@@ -8,10 +8,10 @@ import {
   Ban,
   Banknote,
   Check,
-  ChevronDown,
   Copy,
   Download,
   MessageCircle,
+  MoreHorizontal,
   Pencil,
   RefreshCw,
   Send,
@@ -48,6 +48,13 @@ const RESENDABLE_STATUSES = new Set(['SENT', 'VIEWED', 'PENDING_PAYMENT', 'PARTI
 // Same public payment app the "View & Pay Invoice" link in an invoice email
 // points at (SendInvoiceModal's own viewUrl) — Share and Copy Link hand out
 // that same URL, just from the drawer instead of the compose modal.
+const PRIMARY_BUTTON_CLASS =
+  'inline-flex h-9 items-center gap-2 rounded-lg bg-black px-4 text-sm font-bold text-white transition-colors hover:bg-neutral-800';
+const ICON_BUTTON_CLASS =
+  'inline-flex h-9 w-9 items-center justify-center rounded-lg border border-[#D4D4D4] bg-white text-ink-strong transition-colors hover:bg-surface-muted';
+const MENU_ITEM_CLASS =
+  'flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-ink-strong transition-colors hover:bg-[#F5F5F6]';
+
 const PAYMENT_PUBLIC_URL =
   process.env['NEXT_PUBLIC_PAYMENT_PUBLIC_URL'] ?? 'http://localhost:3000/pay';
 
@@ -130,10 +137,12 @@ export function InvoiceDetailDrawer({
   // (INVOICES DELETE). Both: Owner, Merchant Admin, Brand Admin, Finance.
   const canRecordPayment = useCan('PAYMENTS', 'WRITE');
   const canCancel = useCan('INVOICES', 'DELETE');
-  const [shareMenuOpen, setShareMenuOpen] = useState(false);
+  // Edit is for drafts only (INVOICES WRITE); the API refuses anything issued.
+  const canWriteInvoices = useCan('INVOICES', 'WRITE');
+  const [moreMenuOpen, setMoreMenuOpen] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
-  const shareMenuRef = useDismissablePanel<HTMLDivElement>(shareMenuOpen, () =>
-    setShareMenuOpen(false),
+  const moreMenuRef = useDismissablePanel<HTMLDivElement>(moreMenuOpen, () =>
+    setMoreMenuOpen(false),
   );
 
   if (!open) return null;
@@ -188,6 +197,10 @@ export function InvoiceDetailDrawer({
     CANCELLABLE_STATUSES.has(invoice.status) &&
     invoice.balanceMinor === invoice.totalMinor;
 
+  const canEdit = canWriteInvoices && status === 'DRAFT';
+  const showResend = canSend && status !== null && RESENDABLE_STATUSES.has(status);
+  const hasMoreActions = showResend || canShare || showCancel;
+
   async function handleCancelInvoice() {
     if (!brand || !invoice || cancelling) return;
     if (
@@ -222,7 +235,7 @@ export function InvoiceDetailDrawer({
   }
 
   async function handleShareWhatsApp() {
-    setShareMenuOpen(false);
+    setMoreMenuOpen(false);
     const live = await liveLink();
     if (!live) return;
     window.open(
@@ -238,7 +251,7 @@ export function InvoiceDetailDrawer({
   // Chatly-specific hint when that API isn't available (most desktop
   // browsers) or the user backs out of it without picking anything.
   async function handleShareChatly() {
-    setShareMenuOpen(false);
+    setMoreMenuOpen(false);
     const live = await liveLink();
     if (!live) return;
     const shareUrl = live.url;
@@ -290,13 +303,15 @@ export function InvoiceDetailDrawer({
             </div>
           </div>
 
-          <div className="flex flex-wrap shrink-0 items-center justify-end gap-3">
+          {/* One primary action, the everyday ones as icon buttons, and the
+            rest under "More" — the full row of labelled buttons wrapped onto
+            two or three lines in a half-width panel. */}
+          <div className="flex shrink-0 items-center justify-end gap-1.5">
             {canSend && status === 'DRAFT' && (
               <button
                 type="button"
                 onClick={() => setSendModalOpen(true)}
-                className="inline-flex h-9 items-center gap-2 rounded-lg bg-black px-4 text-sm font-bold text-white
-                           transition-colors hover:bg-neutral-800"
+                className={PRIMARY_BUTTON_CLASS}
               >
                 <Send className="h-4 w-4" aria-hidden />
                 Send
@@ -306,142 +321,128 @@ export function InvoiceDetailDrawer({
               <button
                 type="button"
                 onClick={() => setPaymentModalOpen(true)}
-                className="inline-flex h-9 items-center gap-2 rounded-lg bg-black px-4 text-sm font-bold text-white
-                           transition-colors hover:bg-neutral-800"
+                className={PRIMARY_BUTTON_CLASS}
               >
                 <Banknote className="h-4 w-4" aria-hidden />
                 Record Payment
               </button>
             )}
-            {canSend && status && RESENDABLE_STATUSES.has(status) && (
-              <button
-                type="button"
-                onClick={() => setSendModalOpen(true)}
-                className="inline-flex h-9 items-center gap-2 rounded-lg border border-[#D4D4D4] bg-white px-4
-                           text-sm font-bold text-ink-strong transition-colors hover:bg-surface-muted"
-              >
-                <RefreshCw className="h-4 w-4" aria-hidden />
-                Resend
-              </button>
-            )}
-            {/* Same public, token-only route the payment page's own "Download
-              invoice" points at (apps/api's public/invoices/:token/pdf) —
-              draft invoices have no active public token yet, so this stays
-              disabled until the invoice is actually sent. */}
-            {invoice && brand ? (
-              <a
-                href={`/invoices/pdf?brandId=${brand.id}&id=${invoice.id}`}
-                className="inline-flex h-9 items-center gap-2 rounded-lg border border-[#D4D4D4] bg-white px-4
-                           text-sm font-bold text-ink-strong transition-colors hover:bg-surface-muted"
-              >
-                <Download className="h-4 w-4" aria-hidden />
-                Download PDF
-              </a>
-            ) : (
-              <button
-                type="button"
-                disabled
-                title="Loading the invoice…"
-                className="inline-flex h-9 cursor-not-allowed items-center gap-2 rounded-lg border border-[#D4D4D4]
-                           bg-white px-4 text-sm font-bold text-ink-muted opacity-60"
-              >
-                <Download className="h-4 w-4" aria-hidden />
-                Download PDF
-              </button>
-            )}
-            {canShare ? (
-              <>
-                <button
-                  type="button"
-                  onClick={() => void handleCopyLink()}
-                  title="Copy the invoice's shareable link"
-                  className="inline-flex h-9 items-center gap-2 rounded-lg border border-[#D4D4D4] bg-white px-4
-                             text-sm font-bold text-ink-strong transition-colors hover:bg-surface-muted"
-                >
-                  {linkCopied ? (
-                    <Check className="h-4 w-4 text-success" aria-hidden />
-                  ) : (
-                    <Copy className="h-4 w-4" aria-hidden />
-                  )}
-                  {linkCopied ? 'Copied' : 'Copy Link'}
-                </button>
-
-                <div className="relative shrink-0" ref={shareMenuRef}>
-                  <button
-                    type="button"
-                    aria-haspopup="menu"
-                    aria-expanded={shareMenuOpen}
-                    onClick={() => setShareMenuOpen((v) => !v)}
-                    className="inline-flex h-9 items-center gap-2 rounded-lg border border-[#D4D4D4] bg-white px-4
-                               text-sm font-bold text-ink-strong transition-colors hover:bg-surface-muted"
-                  >
-                    <Share2 className="h-4 w-4" aria-hidden />
-                    Share
-                    <ChevronDown className="h-4 w-4 text-[#64748B]" aria-hidden />
-                  </button>
-
-                  {shareMenuOpen && (
-                    <div
-                      role="menu"
-                      aria-label="Share invoice"
-                      className="absolute right-0 z-10 mt-1 w-44 overflow-hidden rounded-lg border border-[#E5E7EB]
-                                 bg-white py-1 shadow-lg"
-                    >
-                      <button
-                        type="button"
-                        role="menuitem"
-                        onClick={() => void handleShareWhatsApp()}
-                        className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-ink-strong
-                                   transition-colors hover:bg-[#F5F5F6]"
-                      >
-                        <MessageCircle className="h-4 w-4 text-[#25D366]" aria-hidden />
-                        WhatsApp
-                      </button>
-                      <button
-                        type="button"
-                        role="menuitem"
-                        onClick={handleShareChatly}
-                        className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-ink-strong
-                                   transition-colors hover:bg-[#F5F5F6]"
-                      >
-                        <MessageCircle className="h-4 w-4 text-[#6366F1]" aria-hidden />
-                        Chatly
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </>
-            ) : null}
-            {status === 'DRAFT' && (
-              <button
-                type="button"
-                disabled
-                title="Editing a draft isn't built yet"
-                className="inline-flex h-9 cursor-not-allowed items-center gap-2 rounded-lg border border-[#D4D4D4]
-                           bg-white px-4 text-sm font-bold text-ink-muted opacity-60"
+            {canEdit && invoice && brand && (
+              <Link
+                href={`/invoices/${invoice.id}/edit?brandId=${brand.id}`}
+                title="Edit draft"
+                aria-label="Edit draft"
+                className={ICON_BUTTON_CLASS}
               >
                 <Pencil className="h-4 w-4" aria-hidden />
-                Edit
-              </button>
+              </Link>
             )}
-            {showCancel && (
+            {invoice && brand && (
+              <a
+                href={`/invoices/pdf?brandId=${brand.id}&id=${invoice.id}`}
+                title="Download PDF"
+                aria-label="Download PDF"
+                className={ICON_BUTTON_CLASS}
+              >
+                <Download className="h-4 w-4" aria-hidden />
+              </a>
+            )}
+            {canShare && (
               <button
                 type="button"
-                onClick={() => void handleCancelInvoice()}
-                disabled={cancelling}
-                className="inline-flex h-9 items-center gap-2 rounded-lg border border-[#D4D4D4] bg-white px-4
-                           text-sm font-bold text-danger transition-colors hover:bg-danger-surface
-                           disabled:opacity-60"
+                onClick={() => void handleCopyLink()}
+                title={linkCopied ? 'Copied' : 'Copy link'}
+                aria-label="Copy the invoice's shareable link"
+                className={ICON_BUTTON_CLASS}
               >
-                <Ban className="h-4 w-4" aria-hidden />
-                {cancelling ? 'Cancelling…' : 'Cancel Invoice'}
+                {linkCopied ? (
+                  <Check className="h-4 w-4 text-success" aria-hidden />
+                ) : (
+                  <Copy className="h-4 w-4" aria-hidden />
+                )}
               </button>
+            )}
+            {hasMoreActions && (
+              <div className="relative shrink-0" ref={moreMenuRef}>
+                <button
+                  type="button"
+                  aria-haspopup="menu"
+                  aria-expanded={moreMenuOpen}
+                  aria-label="More actions"
+                  title="More actions"
+                  onClick={() => setMoreMenuOpen((v) => !v)}
+                  className={ICON_BUTTON_CLASS}
+                >
+                  <MoreHorizontal className="h-4 w-4" aria-hidden />
+                </button>
+
+                {moreMenuOpen && (
+                  <div
+                    role="menu"
+                    aria-label="More invoice actions"
+                    className="absolute right-0 z-10 mt-1 w-52 overflow-hidden rounded-lg border border-[#E5E7EB]
+                               bg-white py-1 shadow-lg"
+                  >
+                    {showResend && (
+                      <button
+                        type="button"
+                        role="menuitem"
+                        onClick={() => {
+                          setMoreMenuOpen(false);
+                          setSendModalOpen(true);
+                        }}
+                        className={MENU_ITEM_CLASS}
+                      >
+                        <RefreshCw className="h-4 w-4" aria-hidden />
+                        Resend
+                      </button>
+                    )}
+                    {canShare && (
+                      <>
+                        <button
+                          type="button"
+                          role="menuitem"
+                          onClick={() => void handleShareWhatsApp()}
+                          className={MENU_ITEM_CLASS}
+                        >
+                          <MessageCircle className="h-4 w-4 text-[#25D366]" aria-hidden />
+                          Share on WhatsApp
+                        </button>
+                        <button
+                          type="button"
+                          role="menuitem"
+                          onClick={() => void handleShareChatly()}
+                          className={MENU_ITEM_CLASS}
+                        >
+                          <Share2 className="h-4 w-4 text-[#6366F1]" aria-hidden />
+                          Share on Chatly
+                        </button>
+                      </>
+                    )}
+                    {showCancel && (
+                      <button
+                        type="button"
+                        role="menuitem"
+                        onClick={() => {
+                          setMoreMenuOpen(false);
+                          void handleCancelInvoice();
+                        }}
+                        disabled={cancelling}
+                        className={`${MENU_ITEM_CLASS} text-danger disabled:opacity-60`}
+                      >
+                        <Ban className="h-4 w-4" aria-hidden />
+                        {cancelling ? 'Cancelling…' : 'Cancel Invoice'}
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
             )}
             <button
               type="button"
               onClick={onClose}
               aria-label="Close invoice details"
-              className="flex h-9 w-9 items-center justify-center rounded-full text-ink-muted
+              className="ml-1 flex h-9 w-9 items-center justify-center rounded-full text-ink-muted
                          transition-colors hover:bg-[#F5F5F6] hover:text-ink-strong"
             >
               <X className="h-5 w-5" aria-hidden />

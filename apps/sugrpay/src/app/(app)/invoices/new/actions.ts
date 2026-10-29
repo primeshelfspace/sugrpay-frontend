@@ -1,7 +1,14 @@
 'use server';
 
 import { redirect } from 'next/navigation';
-import { ApiError, createInvoice, issueInvoice, type LineItemFormInput } from '@/lib/api';
+import {
+  ApiError,
+  createInvoice,
+  issueInvoice,
+  updateInvoice,
+  type InvoiceFormInput,
+  type LineItemFormInput,
+} from '@/lib/api';
 import { describeApiError, emptyToNull } from '@/lib/form';
 import { MoneyError, parseBasisPoints, toCurrencyCode } from '@platform/kernel';
 
@@ -22,15 +29,12 @@ function percentToBp(value: FormDataEntryValue | null): number {
   return parseBasisPoints(text);
 }
 
-/**
- * Creates a draft and immediately issues it — a two-step Save Draft / Issue
- * flow is the eventual FR-INV shape, but a single action gets a payable
- * invoice into existence with the least friction for a first version.
- */
-export async function createInvoiceAction(
-  _prevState: CreateInvoiceState,
-  formData: FormData,
-): Promise<CreateInvoiceState> {
+type ParsedInvoice = { readonly brandId: string; readonly input: InvoiceFormInput };
+
+/** The invoice form, read and checked the same way for a new invoice and for
+ * an edited draft. The API checks it all again; these are the messages a
+ * person can act on before the round trip. */
+function parseInvoiceForm(formData: FormData): ParsedInvoice | { readonly error: string } {
   const brandId = emptyToNull(formData.get('brandId'));
   const customerId = emptyToNull(formData.get('customerId'));
   if (!brandId) return { error: 'No brand selected.' };
@@ -67,19 +71,52 @@ export async function createInvoiceAction(
     return { error: error instanceof MoneyError ? error.message : 'Invalid tax or card fee rate.' };
   }
 
-  const input = {
+  return {
     brandId,
-    customerId,
-    invoiceDate,
-    dueDate,
-    // Sent by the form from the brand's own setting; never assumed.
-    currency: toCurrencyCode(emptyToNull(formData.get('currency'))),
-    lines,
-    taxRateBp,
-    cardFeeRateBp,
-    notes: emptyToNull(formData.get('notes')),
-    internalNotes: null,
+    input: {
+      brandId,
+      customerId,
+      invoiceDate,
+      dueDate,
+      // Sent by the form from the brand's own setting; never assumed.
+      currency: toCurrencyCode(emptyToNull(formData.get('currency'))),
+      lines,
+      taxRateBp,
+      cardFeeRateBp,
+      notes: emptyToNull(formData.get('notes')),
+      internalNotes: null,
+    },
   };
+}
+
+/**
+ * Creates a draft and immediately issues it — a two-step Save Draft / Issue
+ * flow is the eventual FR-INV shape, but a single action gets a payable
+ * invoice into existence with the least friction for a first version.
+ * With an `invoiceId` in the form, it is an edit of that draft instead:
+ * saved, not issued.
+ */
+export async function createInvoiceAction(
+  _prevState: CreateInvoiceState,
+  formData: FormData,
+): Promise<CreateInvoiceState> {
+  const parsed = parseInvoiceForm(formData);
+  if ('error' in parsed) return { error: parsed.error };
+  const { brandId, input } = parsed;
+
+  const invoiceId = emptyToNull(formData.get('invoiceId'));
+  if (invoiceId) {
+    try {
+      await updateInvoice(brandId, invoiceId, input);
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 409) {
+        return { error: 'This invoice has been issued, so it can no longer be edited.' };
+      }
+      if (error instanceof ApiError) return { error: describeApiError(error) };
+      return { error: error instanceof Error ? error.message : 'Could not save this invoice.' };
+    }
+    redirect(`/invoices?brandId=${brandId}&updated=${invoiceId}`);
+  }
 
   let created;
   try {
