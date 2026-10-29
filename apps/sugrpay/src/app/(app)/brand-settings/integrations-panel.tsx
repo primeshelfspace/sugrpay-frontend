@@ -44,9 +44,9 @@ import {
 
 const POLL_INTERVAL_MS = 4000;
 
-/** Sync Frequency. Real-time pulls nothing on a timer: Zoho's webhooks
- * bring changes within seconds. The others also pull everything from Zoho on
- * that interval, a safety net for webhooks Zoho fails to deliver. */
+/** Sync Frequency. Every choice keeps Zoho's webhooks (changes within
+ * seconds) and adds a full sync from Zoho on its interval, a safety net for
+ * webhooks Zoho fails to deliver: every 5 minutes for Real-time. */
 const FREQUENCY_OPTIONS: {
   readonly value: ZohoSyncFrequency;
   readonly label: string;
@@ -55,7 +55,7 @@ const FREQUENCY_OPTIONS: {
   {
     value: 0,
     label: 'Real-time',
-    hint: 'Changes made in Zoho Books arrive within seconds through the Real-time Webhooks below. No timed sync.',
+    hint: 'Changes made in Zoho Books arrive within seconds through the Real-time Webhooks below, plus a full sync from Zoho every 5 minutes.',
   },
   {
     value: 15,
