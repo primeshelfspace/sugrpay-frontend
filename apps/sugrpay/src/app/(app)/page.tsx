@@ -186,7 +186,7 @@ export default async function DashboardPage({
             Could not load brands: {brandsError}
           </div>
         ) : brands.length === 0 ? (
-          <NoBrandsState createHref="/brands/structure" />
+          <NoBrandsState />
         ) : dataError || !summary ? (
           <div className="rounded-md bg-danger-surface p-4 text-sm text-danger">
             Could not load dashboard data: {dataError ?? 'unknown error'}

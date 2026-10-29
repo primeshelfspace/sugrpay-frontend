@@ -35,7 +35,9 @@ export default async function SignupPage() {
           <h1 className="mt-6 text-[32px] font-bold tracking-tight text-[#0F172A] sm:text-[40px]">
             Create Your Account
           </h1>
-          <p className="mt-3 text-[17px] text-[#64748B]">Create your account to get started.</p>
+          <p className="mt-3 text-[17px] text-[#64748B]">
+            Sign up with your company email to get started.
+          </p>
         </div>
 
         <SignupForm />

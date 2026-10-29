@@ -30,7 +30,7 @@ export default async function BrandsPage() {
         actions={
           canAdd ? (
             <a
-              href={`${invoicing.url}/brands/new`}
+              href={invoicing.url}
               className="inline-flex items-center gap-1.5 rounded-lg bg-black px-4 py-2 text-sm font-bold text-white hover:bg-neutral-800"
             >
               Add a brand in {invoicing.name}
