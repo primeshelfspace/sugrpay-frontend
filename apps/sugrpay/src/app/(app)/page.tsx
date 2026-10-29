@@ -108,7 +108,7 @@ export default async function DashboardPage({
       ] = await Promise.allSettled([
         getDashboardSummary(scopeBrandId, range),
         getDashboardTrend(scopeBrandId),
-        getDashboardStatusBreakdown(scopeBrandId),
+        getDashboardStatusBreakdown(scopeBrandId, range),
         getDashboardTopOverdueCustomers(scopeBrandId),
         getDashboardNeedsAttention(scopeBrandId),
         getDashboardRecentActivity(scopeBrandId),
@@ -211,7 +211,11 @@ export default async function DashboardPage({
               <div className="h-full lg:col-span-2">
                 <CollectionRateTrendChart trend={trend} />
               </div>
-              <InvoiceStatusDonut buckets={statusBreakdown} currency={currency} />
+              <InvoiceStatusDonut
+                buckets={statusBreakdown}
+                currency={currency}
+                rangeLabel={rangeLabel}
+              />
             </div>
 
             <div className="mb-6">

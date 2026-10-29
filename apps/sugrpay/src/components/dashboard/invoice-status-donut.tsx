@@ -19,20 +19,32 @@ const BUCKET_COLOR: Record<DashboardStatusBucketName, string> = {
 export function InvoiceStatusDonut({
   buckets,
   currency,
+  rangeLabel,
 }: {
   buckets: DashboardStatusBucket[];
   currency: string;
+  /** The period the invoices are dated in (the dashboard's date filter). */
+  rangeLabel?: string;
 }) {
   const code = toCurrencyCode(currency);
   const hasData = buckets.some((b) => b.amountMinor > 0);
 
   return (
     <div className="rounded-[14px] border border-[#E5E5E5] bg-surface p-5 shadow-[0px_1px_3px_0px_#0000000A]">
-      <h2 className="mb-4 text-lg font-semibold text-ink-strong">Invoice Status</h2>
+      <h2 className="mb-4 text-lg font-semibold text-ink-strong">
+        Invoice Status
+        {rangeLabel ? (
+          <span className="ml-2 text-sm font-normal text-ink-muted">{rangeLabel}</span>
+        ) : null}
+      </h2>
       {!hasData ? (
         <div className="flex flex-col items-center justify-center gap-2 py-10 text-center">
           <PieChartIcon className="h-8 w-8 text-ink-subtle" aria-hidden />
-          <p className="text-sm text-ink-subtle">No invoices to break down yet.</p>
+          <p className="text-sm text-ink-subtle">
+            {rangeLabel
+              ? `No invoices dated ${rangeLabel.toLowerCase()}.`
+              : 'No invoices to break down yet.'}
+          </p>
         </div>
       ) : (
         <div className="flex flex-col items-center gap-4">
