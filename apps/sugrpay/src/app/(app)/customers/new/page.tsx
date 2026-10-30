@@ -3,6 +3,7 @@ import { BrandTheme } from '@/components/brand-theme';
 import { redirect } from 'next/navigation';
 import { ApiError, listBrands, getCurrentUser } from '@/lib/api';
 import { hasPermission } from '@/lib/permissions';
+import { CREATE_RECORDS_ENABLED } from '@/lib/features';
 import { CustomerForm } from './customer-form';
 import { PageContainer } from '@/components/page-container';
 
@@ -21,7 +22,7 @@ export default async function NewCustomerPage({
   // regardless, but a role without CUSTOMERS WRITE should not land on a form it
   // can never submit.
   const user = await getCurrentUser();
-  if (!hasPermission(user, 'CUSTOMERS', 'WRITE')) {
+  if (!CREATE_RECORDS_ENABLED || !hasPermission(user, 'CUSTOMERS', 'WRITE')) {
     redirect(brandId ? `/customers?brandId=${brandId}` : '/customers');
   }
 
