@@ -1466,7 +1466,8 @@ export function getDashboardTopOverdueCustomers(
   );
 }
 
-export type NeedsAttentionKind = 'STALE_DRAFT' | 'DUE_SOON' | 'SYNC_FAILED' | 'ZOHO_SYNC_STALE';
+/** Invoices only — Zoho sync problems live on the brand's Zoho page. */
+export type NeedsAttentionKind = 'STALE_DRAFT' | 'DUE_SOON';
 
 export interface NeedsAttentionItem {
   kind: NeedsAttentionKind;
@@ -1476,7 +1477,6 @@ export interface NeedsAttentionItem {
   subject: string;
   detail: string;
   invoiceId: string | null;
-  syncJobId: string | null;
   occurredAt: string;
 }
 
@@ -1536,29 +1536,6 @@ export interface CrossBrandCustomersResult {
 /** Only meaningful in All Brands mode. */
 export function getDashboardCrossBrandCustomers(): Promise<CrossBrandCustomersResult> {
   return apiFetch<CrossBrandCustomersResult>('/dashboard/cross-brand-customers');
-}
-
-export function retrySyncJob(jobId: string): Promise<{ queued: true }> {
-  return apiFetch<{ queued: true }>(`/dashboard/sync-jobs/${jobId}/retry`, { method: 'POST' });
-}
-
-export interface DashboardIntegrationsStatus {
-  connected: boolean;
-  lastSyncAt: string | null;
-  /** Zoho is connected but the API runs a non-Zoho accounting driver, so
-   * nothing actually reaches Zoho. Absent from older APIs. */
-  accountingDriverMismatch?: boolean;
-}
-
-/** One signal for both single-brand and All Brands mode — see
- * DashboardService.getIntegrationsStatus for why a per-brand Zoho-only call
- * isn't enough once "All Brands" is on the table. */
-export function getDashboardIntegrationsStatus(
-  brandId: string | null,
-): Promise<DashboardIntegrationsStatus> {
-  return apiFetch<DashboardIntegrationsStatus>(
-    `/dashboard/integrations-status${dashboardQuery(brandId)}`,
-  );
 }
 
 export { PLATFORM_API_URL, SUGRPAY_API_URL, apiUrlFor };
