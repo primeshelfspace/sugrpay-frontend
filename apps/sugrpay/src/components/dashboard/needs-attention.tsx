@@ -1,53 +1,18 @@
 'use client';
 
 import Link from 'next/link';
-import { useTransition } from 'react';
-import { AlertCircle, CheckCircle2, RefreshCw } from 'lucide-react';
-import { toast } from '@platform/ui/toast';
-import { retrySyncJobAction } from '../../app/(app)/dashboard-actions';
+import { AlertCircle, CheckCircle2 } from 'lucide-react';
 import type { NeedsAttentionItem, NeedsAttentionResult } from '@/lib/api';
-import { useCan } from '@/hooks/use-permissions';
 
 const DETAIL_TONE: Record<NeedsAttentionItem['kind'], string> = {
   STALE_DRAFT: 'text-ink-subtle',
   DUE_SOON: 'text-warning',
-  SYNC_FAILED: 'text-danger',
-  ZOHO_SYNC_STALE: 'text-warning',
 };
 
 const ICON_BADGE_TONE: Record<NeedsAttentionItem['kind'], string> = {
   STALE_DRAFT: 'bg-surface-muted text-ink-muted',
   DUE_SOON: 'bg-warning-surface text-warning',
-  SYNC_FAILED: 'bg-danger-surface text-danger',
-  ZOHO_SYNC_STALE: 'bg-warning-surface text-warning',
 };
-
-function RetryButton({ syncJobId }: { syncJobId: string }) {
-  const [pending, startTransition] = useTransition();
-  // POST sync-jobs/:id/retry is INTEGRATIONS WRITE — Finance, Sales and Read
-  // Only still see the failure, just not a button that would 403.
-  const canRetry = useCan('INTEGRATIONS', 'WRITE');
-  if (!canRetry) return null;
-
-  return (
-    <div className="flex shrink-0 flex-col items-end gap-1">
-      <button
-        type="button"
-        disabled={pending}
-        onClick={() =>
-          startTransition(async () => {
-            const result = await retrySyncJobAction(syncJobId);
-            if (!result.ok) toast.error(result.error);
-          })
-        }
-        className="inline-flex items-center gap-1.5 rounded-full bg-ink-strong px-3.5 py-1.5 text-xs font-semibold text-ink-inverse hover:opacity-90 disabled:opacity-60"
-      >
-        <RefreshCw className={`h-3.5 w-3.5 ${pending ? 'animate-spin' : ''}`} aria-hidden />
-        {pending ? 'Retrying…' : 'Retry'}
-      </button>
-    </div>
-  );
-}
 
 export function NeedsAttention({
   result,
@@ -68,7 +33,7 @@ export function NeedsAttention({
               className="mt-1 text-[12px] font-medium leading-none tracking-normal text-ink-subtle"
               style={{ fontFamily: 'var(--font-jakarta)' }}
             >
-              Drafts, upcoming dues, sync failures
+              Unsent drafts and payments due soon
             </p>
           </div>
           {result.totalCount > 0 && (
@@ -93,7 +58,7 @@ export function NeedsAttention({
             const targetBrandId = brandId ?? item.brandId;
             return (
               <li
-                key={`${item.kind}-${item.syncJobId ?? item.invoiceId ?? index}`}
+                key={`${item.kind}-${item.invoiceId ?? index}`}
                 className="flex items-center gap-3 px-8 py-5 first:pt-0 last:pb-0"
               >
                 <span
@@ -115,16 +80,7 @@ export function NeedsAttention({
                   <p className={`text-sm ${DETAIL_TONE[item.kind]}`}>{item.detail}</p>
                 </div>
 
-                {item.kind === 'SYNC_FAILED' && item.syncJobId ? (
-                  <RetryButton syncJobId={item.syncJobId} />
-                ) : item.kind === 'ZOHO_SYNC_STALE' ? (
-                  <Link
-                    href={`/brand-settings?brandId=${targetBrandId}&tab=integrations`}
-                    className="shrink-0 rounded-full border border-border px-3.5 py-1.5 text-xs font-semibold text-ink-strong hover:bg-surface-muted"
-                  >
-                    Check setup
-                  </Link>
-                ) : item.invoiceNumber ? (
+                {item.invoiceNumber ? (
                   <Link
                     href={`/invoices?brandId=${targetBrandId}&search=${encodeURIComponent(item.invoiceNumber)}`}
                     className="shrink-0 rounded-full border border-border px-3.5 py-1.5 text-xs font-semibold text-ink-strong hover:bg-surface-muted"

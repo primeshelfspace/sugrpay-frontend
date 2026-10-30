@@ -6,7 +6,6 @@ import { ByBrandCards } from '@/components/dashboard/by-brand-cards';
 import { CollectionRateTrendChart } from '@/components/dashboard/collection-rate-trend-chart';
 import { CrossBrandCustomersTable } from '@/components/dashboard/cross-brand-customers-table';
 import { DateRangeSelect } from '@/components/dashboard/date-range-select';
-import { IntegrationsStatusBanner } from '@/components/dashboard/integrations-status-banner';
 import { InvoicedVsCollectedChart } from '@/components/dashboard/invoiced-vs-collected-chart';
 import { InvoiceStatusDonut } from '@/components/dashboard/invoice-status-donut';
 import { KpiCards } from '@/components/dashboard/kpi-cards';
@@ -18,7 +17,6 @@ import {
   ApiError,
   getDashboardByBrand,
   getDashboardCrossBrandCustomers,
-  getDashboardIntegrationsStatus,
   getDashboardNeedsAttention,
   getDashboardRecentActivity,
   getDashboardStatusBreakdown,
@@ -75,11 +73,6 @@ export default async function DashboardPage({
   const range = rangeBoundsFor(rangePreset);
   const rangeLabel = DATE_RANGE_LABELS[rangePreset];
 
-  // Brand Settings has no All-Brands view — "Connect Now" always needs one
-  // concrete brand, same rule every other non-dashboard nav destination
-  // already follows (AdminShell.hrefFor).
-  const connectBrandId = activeBrand?.id ?? brands[0]?.id ?? null;
-
   let summary: DashboardSummary | null = null;
   let trend: DashboardTrendPoint[] = [];
   let statusBreakdown: DashboardStatusBucket[] = [];
@@ -88,9 +81,6 @@ export default async function DashboardPage({
   let recentActivity: RecentActivityItem[] = [];
   let byBrand: BrandRollup[] = [];
   let crossBrandCustomers: CrossBrandCustomersResult = { rows: [], matchedCount: 0 };
-  let integrationsConnected = false;
-  let integrationsLastSyncAt: string | null = null;
-  let accountingDriverMismatch = false;
   let dataError: string | null = null;
 
   if (brands.length > 0) {
@@ -104,7 +94,6 @@ export default async function DashboardPage({
         recentActivityOutcome,
         byBrandOutcome,
         crossBrandOutcome,
-        integrationsOutcome,
       ] = await Promise.allSettled([
         getDashboardSummary(scopeBrandId, range),
         getDashboardTrend(scopeBrandId),
@@ -117,7 +106,6 @@ export default async function DashboardPage({
         scopeBrandId === null
           ? getDashboardCrossBrandCustomers()
           : Promise.resolve<CrossBrandCustomersResult>({ rows: [], matchedCount: 0 }),
-        getDashboardIntegrationsStatus(scopeBrandId),
       ]);
 
       if (summaryOutcome.status === 'rejected') {
@@ -131,17 +119,9 @@ export default async function DashboardPage({
       recentActivity = settled(recentActivityOutcome, []);
       byBrand = settled(byBrandOutcome, []);
       crossBrandCustomers = settled(crossBrandOutcome, { rows: [], matchedCount: 0 });
-      const integrationsStatus = settled(integrationsOutcome, {
-        connected: false,
-        lastSyncAt: null,
-      });
-      integrationsConnected = integrationsStatus.connected;
-      integrationsLastSyncAt = integrationsStatus.lastSyncAt;
-      accountingDriverMismatch = integrationsStatus.accountingDriverMismatch ?? false;
-      // Every figure here comes from this platform's own database, so it is
-      // shown whether or not Zoho Books is connected: invoices, payments and
-      // customers live here, Zoho is only kept in step with them. The banner
-      // below says whether Zoho is connected; it does not hide the data.
+      // Every figure here comes from this platform's own database: invoices,
+      // payments and customers live here, and Zoho is only kept in step with
+      // them in the background. Nothing on this page asks Zoho anything.
     } catch (cause) {
       dataError = cause instanceof ApiError ? cause.message : String(cause);
     }
@@ -183,18 +163,6 @@ export default async function DashboardPage({
           </div>
         ) : (
           <>
-            <IntegrationsStatusBanner
-              connected={integrationsConnected}
-              lastSyncAt={integrationsLastSyncAt}
-              accountingDriverMismatch={accountingDriverMismatch}
-              needsAttentionCount={needsAttention.totalCount}
-              connectHref={
-                connectBrandId
-                  ? `/brand-settings?brandId=${connectBrandId}&tab=integrations`
-                  : '/brand-settings'
-              }
-            />
-
             <KpiCards summary={summary} rangeLabel={rangeLabel} />
 
             <div className="mb-6 grid gap-4 lg:grid-cols-3">
