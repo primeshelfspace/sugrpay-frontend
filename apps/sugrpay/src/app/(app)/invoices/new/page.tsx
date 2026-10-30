@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation';
 import { DEFAULT_BRAND_CURRENCY } from '@platform/platform-contracts';
 import { ApiError, listBrands, listCustomers, getCurrentUser } from '@/lib/api';
 import { hasPermission } from '@/lib/permissions';
+import { CREATE_RECORDS_ENABLED } from '@/lib/features';
 import { InvoiceForm } from './invoice-form';
 import { PageContainer } from '@/components/page-container';
 
@@ -20,7 +21,7 @@ export default async function NewInvoicePage({
   // regardless, but a role without INVOICES WRITE should not land on a form it
   // can never submit.
   const user = await getCurrentUser();
-  if (!hasPermission(user, 'INVOICES', 'WRITE')) {
+  if (!CREATE_RECORDS_ENABLED || !hasPermission(user, 'INVOICES', 'WRITE')) {
     redirect(brandId ? `/invoices?brandId=${brandId}` : '/invoices');
   }
 

@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import { NoBrandsState } from '@/components/no-brands-state';
 import { useCan } from '@/hooks/use-permissions';
+import { CREATE_RECORDS_ENABLED } from '@/lib/features';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { Calendar, ChevronDown, Info, Plus, ScrollText, Search, Send, X } from 'lucide-react';
 import { toast } from '@platform/ui/toast';
@@ -205,7 +206,8 @@ export function InvoicesPageClient({
   // Bulk mode is only ever entered from its toolbar button, so gating that
   // one button on INVOICE_SEND WRITE keeps Read Only out of the whole flow.
   const canSend = useCan('INVOICE_SEND', 'WRITE');
-  const canCreate = useCan('INVOICES', 'WRITE');
+  // Hidden while creating invoices here is switched off (lib/features.ts).
+  const canCreate = useCan('INVOICES', 'WRITE') && CREATE_RECORDS_ENABLED;
   const [bulkMode, setBulkMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkSending, setBulkSending] = useState(false);

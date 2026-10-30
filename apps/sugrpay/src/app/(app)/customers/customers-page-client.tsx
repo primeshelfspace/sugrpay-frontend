@@ -2,6 +2,7 @@
 
 import { NoBrandsState } from '@/components/no-brands-state';
 import { useCan } from '@/hooks/use-permissions';
+import { CREATE_RECORDS_ENABLED } from '@/lib/features';
 import { useIntervalWhenVisible } from '@/hooks/use-interval-when-visible';
 import { useEffect, useRef, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
@@ -200,7 +201,8 @@ export function CustomersPageClient({
             View, add, and manage customers for invoicing and payments.
           </p>
         </div>
-        {brand && canWrite && (
+        {/* Hidden while creating customers here is switched off (lib/features.ts). */}
+        {brand && canWrite && CREATE_RECORDS_ENABLED && (
           <button
             type="button"
             onClick={() => setAddOpen(true)}
