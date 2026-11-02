@@ -1,6 +1,6 @@
 import { terminalStatusLabel } from '@platform/invoicing-contracts';
 import { formatDateForDisplay } from '@platform/kernel';
-import { formatMinorForDisplay, toCurrencyCode } from '@platform/kernel/money';
+import { formatMinorForDisplay, formatQuantity, toCurrencyCode } from '@platform/kernel/money';
 import {
   ApiError,
   getCurrentUser,
@@ -204,7 +204,7 @@ async function loadInvoicePdfPreview(brandId: string): Promise<InvoicePdfPreview
     dueDateLabel: formatDateForDisplay(latest.dueDate),
     lineItems: latest.lineItems.map((line) => ({
       description: line.itemName,
-      quantityLabel: String(line.quantity),
+      quantityLabel: formatQuantity(line.quantity),
       rateLabel: formatMinorForDisplay(line.unitPriceMinor, currency),
       amountLabel: formatMinorForDisplay(line.lineTotalMinor, currency),
     })),

@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 import { toast } from '@platform/ui/toast';
 import { formatDateForDisplay } from '@platform/kernel';
-import { formatMinorForDisplay, toCurrencyCode } from '@platform/kernel/money';
+import { formatMinorForDisplay, formatQuantity, toCurrencyCode } from '@platform/kernel/money';
 import type { Brand, InvoiceActivityEntry, InvoiceDetail } from '@/lib/api';
 import {
   invoiceDetailStatus,
@@ -566,8 +566,16 @@ export function InvoiceDetailDrawer({
                             <td className="px-4 py-3 text-ink-muted">{index + 1}</td>
                             <td className="px-3 py-3 font-medium text-ink-strong">
                               {line.itemName}
+                              {line.description && (
+                                <p className="mt-0.5 whitespace-pre-line text-xs font-normal text-ink-muted">
+                                  {line.description}
+                                </p>
+                              )}
                             </td>
-                            <td className="px-3 py-3 text-right text-ink-muted">{line.quantity}</td>
+                            {/* Stored scaled (x10,000), as the API keeps it. */}
+                            <td className="px-3 py-3 text-right text-ink-muted">
+                              {formatQuantity(line.quantity)}
+                            </td>
                             <td className="px-3 py-3 text-right text-ink-muted">
                               {formatMinorForDisplay(line.unitPriceMinor, currency)}
                             </td>
@@ -608,6 +616,17 @@ export function InvoiceDetailDrawer({
                       </div>
                     </div>
                   </div>
+
+                  {invoice.notes?.trim() && (
+                    <div className="mt-6 border-t border-[#E5E7EB] pt-4">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-[#8C919B]">
+                        Notes
+                      </p>
+                      <p className="mt-1 whitespace-pre-line text-sm text-ink-muted">
+                        {invoice.notes}
+                      </p>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div className="mt-4">
