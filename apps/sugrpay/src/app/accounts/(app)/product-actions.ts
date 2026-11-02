@@ -14,13 +14,15 @@ export interface ProductsActionState {
 }
 
 /**
- * Sends the user into a product: the API issues a JWT only for a product
- * enabled for the company, and the user goes to the product's address with
- * the token in the URL fragment, so it never reaches a server's logs.
+ * Sends the user into a product: the API issues a 12-hour JWT and a refresh
+ * token only for a product enabled for the company, and the user goes to the
+ * product's address with both in the URL fragment, so they never reach a
+ * server's logs (Product Session story).
  */
 async function launch(product: Product): Promise<string> {
-  const { url, token } = await continueIntoProduct(product);
-  return `${url}#token=${encodeURIComponent(token)}`;
+  const { url, token, refreshToken } = await continueIntoProduct(product);
+  const fragment = new URLSearchParams({ token, refreshToken });
+  return `${url}#${fragment.toString()}`;
 }
 
 /** Enables the selected products. With exactly one enabled, the user goes
