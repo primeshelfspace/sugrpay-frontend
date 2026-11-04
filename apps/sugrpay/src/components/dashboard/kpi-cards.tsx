@@ -72,7 +72,7 @@ export function KpiCards({
       <Card
         label="Overdue"
         value={formatMinorForDisplay(summary.overdueMinor, currency)}
-        sublabel="As of today"
+        sublabel={`${rangeLabel} · as of today`}
         tone="danger"
       />
       {summary.otherCurrencyBrandCount > 0 && (

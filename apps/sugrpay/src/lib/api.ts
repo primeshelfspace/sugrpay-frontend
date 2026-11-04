@@ -1478,15 +1478,22 @@ export function getDashboardSummary(
 }
 
 export interface DashboardTrendPoint {
+  /** The point's first day (YYYY-MM-DD), or month (YYYY-MM). */
   month: string;
+  /** What one point covers: the API picks days for a month, weeks for a
+   * quarter, months for a year. */
+  granularity: 'day' | 'week' | 'month';
   label: string;
   invoicedMinor: number;
   collectedMinor: number;
   collectionRate: number;
 }
 
-export function getDashboardTrend(brandId: string | null): Promise<DashboardTrendPoint[]> {
-  return apiFetch<DashboardTrendPoint[]>(`/dashboard/trend${dashboardQuery(brandId)}`);
+export function getDashboardTrend(
+  brandId: string | null,
+  range?: DashboardRange,
+): Promise<DashboardTrendPoint[]> {
+  return apiFetch<DashboardTrendPoint[]>(`/dashboard/trend${dashboardQuery(brandId, range)}`);
 }
 
 export type DashboardStatusBucketName = 'Paid' | 'Unpaid' | 'Overdue' | 'Partially Paid' | 'Draft';
@@ -1519,9 +1526,10 @@ export interface TopOverdueCustomer {
 
 export function getDashboardTopOverdueCustomers(
   brandId: string | null,
+  range?: DashboardRange,
 ): Promise<TopOverdueCustomer[]> {
   return apiFetch<TopOverdueCustomer[]>(
-    `/dashboard/top-overdue-customers${dashboardQuery(brandId)}`,
+    `/dashboard/top-overdue-customers${dashboardQuery(brandId, range)}`,
   );
 }
 
@@ -1561,8 +1569,13 @@ export interface RecentActivityItem {
   occurredAt: string;
 }
 
-export function getDashboardRecentActivity(brandId: string | null): Promise<RecentActivityItem[]> {
-  return apiFetch<RecentActivityItem[]>(`/dashboard/recent-activity${dashboardQuery(brandId)}`);
+export function getDashboardRecentActivity(
+  brandId: string | null,
+  range?: DashboardRange,
+): Promise<RecentActivityItem[]> {
+  return apiFetch<RecentActivityItem[]>(
+    `/dashboard/recent-activity${dashboardQuery(brandId, range)}`,
+  );
 }
 
 export interface BrandRollup {
