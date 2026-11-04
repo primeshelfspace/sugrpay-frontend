@@ -33,7 +33,7 @@ export function NeedsAttention({
               className="mt-1 text-[12px] font-medium leading-none tracking-normal text-ink-subtle"
               style={{ fontFamily: 'var(--font-jakarta)' }}
             >
-              Unsent drafts and payments due soon
+              As of today: unsent drafts and payments due soon
             </p>
           </div>
           {result.totalCount > 0 && (
