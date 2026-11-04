@@ -6,10 +6,11 @@ import { Calendar, ChevronDown } from 'lucide-react';
 import { useDismissablePanel } from '@/hooks/use-dismissable-panel';
 import { DATE_RANGE_LABELS, DATE_RANGE_PRESETS, type DateRangePreset } from '@/lib/date-range';
 
-/** The dashboard's own "This Month" selector — scopes the KPI cards and By
- * Brand rollup only; the two 6-month trend charts have a fixed lookback of
- * their own and are deliberately not affected by this (their captions never
- * change with it). Same open/close/outside-click shape as the invoices
+/** The dashboard's date filter (This Month, Last Quarter, ...). Every
+ * widget that is about a period follows it: the KPI cards, both trend charts,
+ * the status donut, Top Overdue Customers, Recent Activity and By Brand.
+ * Needs Attention (today) and Customers Across Multiple Brands (all time) say
+ * so in their captions. Same open/close/outside-click shape as the invoices
  * list's own date-range menu (invoices-page-client.tsx). */
 export function DateRangeSelect({ current }: { current: DateRangePreset }) {
   const router = useRouter();
