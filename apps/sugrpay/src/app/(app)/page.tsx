@@ -96,11 +96,11 @@ export default async function DashboardPage({
         crossBrandOutcome,
       ] = await Promise.allSettled([
         getDashboardSummary(scopeBrandId, range),
-        getDashboardTrend(scopeBrandId, range),
+        getDashboardTrend(scopeBrandId),
         getDashboardStatusBreakdown(scopeBrandId, range),
-        getDashboardTopOverdueCustomers(scopeBrandId, range),
+        getDashboardTopOverdueCustomers(scopeBrandId),
         getDashboardNeedsAttention(scopeBrandId),
-        getDashboardRecentActivity(scopeBrandId, range),
+        getDashboardRecentActivity(scopeBrandId),
         // Only meaningful in All Brands mode — skip the round trip otherwise.
         scopeBrandId === null ? getDashboardByBrand(range) : Promise.resolve<BrandRollup[]>([]),
         scopeBrandId === null
@@ -167,7 +167,7 @@ export default async function DashboardPage({
 
             <div className="mb-6 grid gap-4 lg:grid-cols-3">
               <div className="h-full lg:col-span-2">
-                <CollectionRateTrendChart trend={trend} rangeLabel={rangeLabel} />
+                <CollectionRateTrendChart trend={trend} />
               </div>
               <InvoiceStatusDonut
                 buckets={statusBreakdown}
@@ -177,22 +177,18 @@ export default async function DashboardPage({
             </div>
 
             <div className="mb-6">
-              <InvoicedVsCollectedChart trend={trend} currency={currency} rangeLabel={rangeLabel} />
+              <InvoicedVsCollectedChart trend={trend} currency={currency} />
             </div>
 
             <div className="mb-6 grid gap-4 lg:grid-cols-2">
-              <TopOverdueCustomers
-                customers={topOverdueCustomers}
-                currency={currency}
-                rangeLabel={rangeLabel}
-              />
+              <TopOverdueCustomers customers={topOverdueCustomers} currency={currency} />
               <div id="needs-attention">
                 <NeedsAttention result={needsAttention} brandId={scopeBrandId} />
               </div>
             </div>
 
             <div className="mb-6">
-              <RecentActivity items={recentActivity} rangeLabel={rangeLabel} />
+              <RecentActivity items={recentActivity} />
             </div>
 
             {scopeBrandId === null && <ByBrandCards brands={byBrand} />}

@@ -15,12 +15,9 @@ const AVATAR_TONE = 'bg-ink-strong';
 export function TopOverdueCustomers({
   customers,
   currency,
-  rangeLabel,
 }: {
   customers: TopOverdueCustomer[];
   currency: string;
-  /** Overdue today, on invoices dated in this period (the date filter). */
-  rangeLabel: string;
 }) {
   const code = toCurrencyCode(currency);
   return (
@@ -35,7 +32,7 @@ export function TopOverdueCustomers({
               className="mt-1 text-[12px] font-medium leading-none tracking-normal text-ink-subtle"
               style={{ fontFamily: 'var(--font-jakarta)' }}
             >
-              Invoices dated {rangeLabel.toLowerCase()}, overdue today — by amount
+              Sorted by amount — click row for detail
             </p>
           </div>
           {customers.length > 0 && (
@@ -52,9 +49,7 @@ export function TopOverdueCustomers({
       {customers.length === 0 ? (
         <div className="flex flex-col items-center justify-center gap-2 py-8 text-center">
           <Users className="h-8 w-8 text-ink-subtle" aria-hidden />
-          <p className="text-sm text-ink-subtle">
-            No overdue customers for {rangeLabel.toLowerCase()}.
-          </p>
+          <p className="text-sm text-ink-subtle">No overdue customers.</p>
         </div>
       ) : (
         <ul className="-mx-8 divide-y divide-[#E5E5E5]">

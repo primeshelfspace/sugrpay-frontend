@@ -12,23 +12,15 @@ function relativeTime(iso: string): string {
   return `${days} days ago`;
 }
 
-export function RecentActivity({
-  items,
-  rangeLabel,
-}: {
-  items: RecentActivityItem[];
-  /** The latest activity within this period (the date filter). */
-  rangeLabel: string;
-}) {
+export function RecentActivity({ items }: { items: RecentActivityItem[] }) {
   return (
     <div className="rounded-2xl border border-border bg-surface p-5 shadow-sm">
-      <h2 className="text-lg font-semibold text-ink-strong">Recent Activity</h2>
-      <p className="mb-4 text-xs text-ink-subtle">Latest in {rangeLabel.toLowerCase()}</p>
+      <h2 className="mb-4 text-lg font-semibold text-ink-strong">Recent Activity</h2>
 
       {items.length === 0 ? (
         <div className="flex flex-col items-center justify-center gap-2 py-8 text-center">
           <Activity className="h-8 w-8 text-ink-subtle" aria-hidden />
-          <p className="text-sm text-ink-subtle">No activity in {rangeLabel.toLowerCase()}.</p>
+          <p className="text-sm text-ink-subtle">No activity recorded yet.</p>
         </div>
       ) : (
         <ul className="space-y-3">
