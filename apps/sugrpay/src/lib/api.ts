@@ -1252,6 +1252,9 @@ export interface ZohoConnectionStatus {
   scheduledPullEnabled: boolean;
   customerSyncEnabled: boolean;
   invoiceSyncEnabled: boolean;
+  /** Zoho Books has told us to stop calling this brand's organisation until
+   * then (ISO), or null. Every brand on the organisation shares it. */
+  rateLimitedUntil?: string | null;
 }
 
 export function getZohoStatus(brandId: string): Promise<ZohoConnectionStatus> {
