@@ -212,14 +212,9 @@ export function enableProducts(
   return apiFetch('/company/products', { method: 'POST', body: JSON.stringify({ products }) });
 }
 
-export function continueIntoProduct(product: Product): Promise<{
-  product: Product;
-  url: string;
-  token: string;
-  expiresAt: string;
-  refreshToken: string;
-  refreshExpiresAt: string;
-}> {
+export function continueIntoProduct(
+  product: Product,
+): Promise<{ product: Product; url: string; token: string; expiresAt: string }> {
   return apiFetch(`/company/products/${product}/continue`, { method: 'POST' });
 }
 
