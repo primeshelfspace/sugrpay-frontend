@@ -46,7 +46,7 @@ export function CrossBrandCustomersTable({
               className="mt-1 text-[12px] font-medium leading-none tracking-normal text-ink-subtle"
               style={{ fontFamily: 'var(--font-jakarta)' }}
             >
-              Matched by email — present in 2 or more brands
+              All time: matched by email — present in 2 or more brands
             </p>
           </div>
           <span className="rounded-full bg-surface-muted px-3 py-1 text-sm font-semibold text-ink-muted">
