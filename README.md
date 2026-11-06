@@ -79,3 +79,5 @@ payment links point there.
 - **A server with pm2 and nginx:** [deploy/README.md](deploy/README.md).
 
 Deploy the backend first when a release changes the API.
+
+Last redeployed from main on 2026-11-07.
