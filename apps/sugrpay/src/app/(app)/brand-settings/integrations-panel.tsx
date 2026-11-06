@@ -55,7 +55,7 @@ const FREQUENCY_OPTIONS: {
   {
     value: 0,
     label: 'Real-time',
-    hint: 'Changes made in Zoho Books arrive within seconds through the Real-time Webhooks below, plus a full sync from Zoho every 5 minutes.',
+    hint: 'Changes made in Zoho Books arrive within seconds through the Real-time Webhooks below, plus a full sync from Zoho every 15 minutes.',
   },
   {
     value: 15,
@@ -336,9 +336,22 @@ function ZohoDetail({
     setResyncing(true);
     try {
       const response = await fetch(`/settings/zoho/pull?brandId=${brandId}`, { method: 'POST' });
+      const body = (await response.json().catch(() => null)) as {
+        message?: string;
+        queued?: boolean;
+        rateLimitedUntil?: string | null;
+      } | null;
       if (!response.ok) {
-        const body = (await response.json().catch(() => null)) as { message?: string } | null;
         toast.error(body?.message ?? 'Could not queue a resync.');
+      } else if (body?.queued === false && body.rateLimitedUntil) {
+        // Zoho is refusing calls for this organisation; a pull now would be
+        // skipped without reaching Zoho. Say so rather than "queued".
+        setStatus((current) => ({ ...current, rateLimitedUntil: body.rateLimitedUntil ?? null }));
+        toast.error(
+          `Zoho Books is limiting requests for this organisation until ${formatPauseTime(
+            body.rateLimitedUntil,
+          )}. Try again after that.`,
+        );
       } else {
         toast.success('Resync queued — watch the log below.');
         setActivityPage(1);
@@ -471,6 +484,13 @@ function ZohoDetail({
                 {FREQUENCY_OPTIONS.find((opt) => opt.value === status.pullFrequencyMinutes)?.hint ??
                   'Use Manual Resync in the Connection Log for a full refresh.'}
               </p>
+              {status.rateLimitedUntil && new Date(status.rateLimitedUntil) > new Date() && (
+                <p className="mt-2 rounded-md bg-warning-surface px-3 py-2 text-sm text-warning">
+                  Zoho Books is limiting requests for this organisation until{' '}
+                  {formatPauseTime(status.rateLimitedUntil)}. Syncing with Zoho waits until then;
+                  nothing is lost.
+                </p>
+              )}
               {!status.scheduledPullEnabled && status.pullFrequencyMinutes > 0 && (
                 <p className="mt-2 rounded-md bg-warning-surface px-3 py-2 text-sm text-warning">
                   Timed syncs are paused on this server for now. Real-time webhooks and Manual
@@ -1174,4 +1194,15 @@ function ZohoSandboxSection({ brandId }: { brandId: string }) {
         )}
     </section>
   );
+}
+
+/** "3:45 PM" today, or "Nov 8, 3:45 PM" on another day, in the viewer's time. */
+function formatPauseTime(iso: string): string {
+  const at = new Date(iso);
+  const sameDay = at.toDateString() === new Date().toDateString();
+  return at.toLocaleString(undefined, {
+    ...(sameDay ? {} : { month: 'short', day: 'numeric' }),
+    hour: 'numeric',
+    minute: '2-digit',
+  });
 }
