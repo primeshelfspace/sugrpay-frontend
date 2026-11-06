@@ -13,23 +13,12 @@ const SERIES = [
   { key: 'collectedMinor', label: 'Collected', color: palette.accent },
 ] as const;
 
-/** "This Month · daily" — the period the charts follow, and what one point is. */
-function periodCaption(rangeLabel: string, trend: DashboardTrendPoint[]): string {
-  const unit = trend[0]?.granularity;
-  const per = unit === 'day' ? 'daily' : unit === 'week' ? 'weekly' : 'monthly';
-  return trend.length ? `${rangeLabel} · ${per}` : rangeLabel;
-}
-
-/** Follows the dashboard's date filter (the API picks the points). */
 export function InvoicedVsCollectedChart({
   trend,
   currency,
-  rangeLabel,
 }: {
   trend: DashboardTrendPoint[];
   currency: string;
-  /** The header's date filter, e.g. "This Quarter". */
-  rangeLabel: string;
 }) {
   const code = toCurrencyCode(currency);
   const hasData = trend.some((point) => point.invoicedMinor > 0 || point.collectedMinor > 0);
@@ -45,7 +34,7 @@ export function InvoicedVsCollectedChart({
         <div>
           <h2 className="text-lg font-semibold text-ink-strong">Invoiced vs Collected</h2>
           <p className="text-xs text-ink-subtle">
-            {periodCaption(rangeLabel, trend)} — Gap between billed and received
+            6-months lookback — Gap between billed and received
           </p>
         </div>
         <ul className="flex shrink-0 items-center gap-4">
@@ -68,9 +57,7 @@ export function InvoicedVsCollectedChart({
       {!hasData ? (
         <div className="flex h-[260px] flex-col items-center justify-center gap-2 text-center">
           <BarChart3 className="h-8 w-8 text-ink-subtle" aria-hidden />
-          <p className="text-sm text-ink-subtle">
-            No billing activity in {rangeLabel.toLowerCase()}.
-          </p>
+          <p className="text-sm text-ink-subtle">No billing activity recorded yet.</p>
         </div>
       ) : (
         <ResponsiveContainer width="100%" height={260}>

@@ -13,34 +13,19 @@ import { LineChart as LineChartIcon } from 'lucide-react';
 import { palette } from '@platform/kernel/tokens';
 import type { DashboardTrendPoint } from '@/lib/api';
 
-/** "This Month · daily" — the period the charts follow, and what one point is. */
-function periodCaption(rangeLabel: string, trend: DashboardTrendPoint[]): string {
-  const unit = trend[0]?.granularity;
-  const per = unit === 'day' ? 'daily' : unit === 'week' ? 'weekly' : 'monthly';
-  return trend.length ? `${rangeLabel} · ${per}` : rangeLabel;
-}
-
-/** A single series names itself via the card title — no legend needed. It
- * follows the dashboard's date filter (the API picks the points). */
-export function CollectionRateTrendChart({
-  trend,
-  rangeLabel,
-}: {
-  trend: DashboardTrendPoint[];
-  /** The header's date filter, e.g. "This Quarter". */
-  rangeLabel: string;
-}) {
+/** A single series names itself via the card title — no legend needed. */
+export function CollectionRateTrendChart({ trend }: { trend: DashboardTrendPoint[] }) {
   const hasData = trend.some((point) => point.invoicedMinor > 0 || point.collectedMinor > 0);
   const data = trend.map((point) => ({ label: point.label, rate: point.collectionRate * 100 }));
 
   return (
     <div className="h-full rounded-2xl border border-border bg-surface p-5 shadow-sm">
       <h2 className="text-lg font-semibold text-ink-strong">Collection Rate Trend</h2>
-      <p className="mb-4 text-sm text-ink-subtle">{periodCaption(rangeLabel, trend)}</p>
+      <p className="mb-4 text-sm text-ink-subtle">6-months lookback</p>
       {!hasData ? (
         <div className="flex h-[200px] flex-col items-center justify-center gap-2 text-center">
           <LineChartIcon className="h-8 w-8 text-ink-subtle" aria-hidden />
-          <p className="text-sm text-ink-subtle">No invoices in {rangeLabel.toLowerCase()}</p>
+          <p className="text-sm text-ink-subtle">No invoices in this period yet</p>
         </div>
       ) : (
         <ResponsiveContainer width="100%" height={200}>
