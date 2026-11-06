@@ -133,6 +133,17 @@ function formatSyncedAt(iso: string | null): string {
   return iso ? new Date(iso).toLocaleString('en-US') : 'Never yet';
 }
 
+/** The most recent sync either way: a push to Zoho (lastSyncAt) or a pull
+ * from it (lastPulledAt). "Last synced" used to show the push time only, so
+ * a manual resync (a pull) never moved it. */
+function lastSyncedAt(
+  status: Pick<ZohoConnectionStatus, 'lastSyncAt' | 'lastPulledAt'>,
+): string | null {
+  const times = [status.lastSyncAt, status.lastPulledAt].filter((t): t is string => Boolean(t));
+  if (times.length === 0) return null;
+  return times.reduce((latest, t) => (new Date(t) > new Date(latest) ? t : latest));
+}
+
 /**
  * The Integrations tab of Brand Settings. Only Zoho Books exists today, so
  * the "list" is a single row — but the list/detail split (rather than
@@ -188,7 +199,7 @@ export function IntegrationsPanel({
               </div>
               <p className="mt-0.5 text-sm text-ink-muted">
                 {initialStatus.connected
-                  ? `${brandDisplayName} • Last synced ${formatSyncedAt(initialStatus.lastSyncAt)}`
+                  ? `${brandDisplayName} • Last synced ${formatSyncedAt(lastSyncedAt(initialStatus))}`
                   : `Sync customers and invoices between ${brandDisplayName} and Zoho Books.`}
               </p>
             </div>
@@ -301,6 +312,29 @@ function ZohoDetail({
     }
   }, [brandId, activityPage, activityPageSize]);
 
+  // The connection status (last synced, health, Zoho pausing) changes when a
+  // pull or push finishes, so it is polled with the log.
+  const refreshStatus = useCallback(async () => {
+    try {
+      const response = await fetch(`/settings/zoho/status?brandId=${brandId}`, {
+        cache: 'no-store',
+      });
+      if (!response.ok) return;
+      const latest = (await response.json()) as ZohoConnectionStatus;
+      // Only what a sync changes: a setting being saved (frequency, toggles)
+      // keeps the value the user just chose.
+      setStatus((current) => ({
+        ...current,
+        lastSyncAt: latest.lastSyncAt,
+        lastPulledAt: latest.lastPulledAt,
+        health: latest.health,
+        rateLimitedUntil: latest.rateLimitedUntil ?? null,
+      }));
+    } catch {
+      // A missed poll just tries again on the next tick.
+    }
+  }, [brandId]);
+
   // Page/size changes fetch straight away rather than waiting for the poll.
   useEffect(() => {
     if (activityPage === activity.page && activityPageSize === activity.pageSize) return;
@@ -309,9 +343,12 @@ function ZohoDetail({
 
   useEffect(() => {
     if (!status.connected) return;
-    const timer = setInterval(refreshActivity, POLL_INTERVAL_MS);
+    const timer = setInterval(() => {
+      void refreshActivity();
+      void refreshStatus();
+    }, POLL_INTERVAL_MS);
     return () => clearInterval(timer);
-  }, [status.connected, refreshActivity]);
+  }, [status.connected, refreshActivity, refreshStatus]);
 
   async function saveSetting(
     field: 'pullFrequencyMinutes' | 'customerSyncEnabled' | 'invoiceSyncEnabled',
@@ -356,6 +393,7 @@ function ZohoDetail({
         toast.success('Resync queued — watch the log below.');
         setActivityPage(1);
         void refreshActivity();
+        void refreshStatus();
       }
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Could not reach the server.');
@@ -413,7 +451,7 @@ function ZohoDetail({
           <div className="border-l border-border pl-8">
             <p className="text-sm text-ink-muted">Last synced</p>
             <p className="mt-1 text-base font-bold text-ink-strong">
-              {status.connected ? formatSyncedAt(status.lastSyncAt) : '—'}
+              {status.connected ? formatSyncedAt(lastSyncedAt(status)) : '—'}
             </p>
           </div>
         </div>
