@@ -395,51 +395,47 @@ function ZohoDetail({
           <div className="grid gap-6 sm:grid-cols-2">
             <section className="rounded-xl border border-border bg-surface p-5 shadow-sm sm:p-6">
               <h3 className="text-base font-bold text-ink-strong">Sync Frequency</h3>
-              {!status.scheduledPullEnabled ? (
-                <p className="mt-1 text-sm text-ink-muted">
-                  Changes made in Zoho Books arrive through the Real-time Webhooks below, within
-                  seconds — there is no timed sync. Use Manual Resync in the Connection Log for a
-                  full refresh. Changes made here are sent to Zoho Books as they happen.
+              <p className="mt-1 text-sm text-ink-muted">
+                How often this brand pulls data and pushes invoices/payments to Zoho Books.
+              </p>
+              <div className="relative mt-4">
+                <select
+                  aria-label="Sync frequency"
+                  value={status.pullFrequencyMinutes}
+                  disabled={!canWrite || savingField === 'pullFrequencyMinutes'}
+                  onChange={(event) => {
+                    const value = Number(event.target.value) as 1 | 15 | 60 | 1440;
+                    void saveSetting(
+                      'pullFrequencyMinutes',
+                      { pullFrequencyMinutes: value },
+                      { pullFrequencyMinutes: value },
+                    );
+                  }}
+                  className="w-full appearance-none rounded-[10px] border border-border bg-white px-4 py-3 pr-10 text-base text-ink-strong disabled:opacity-60"
+                >
+                  {FREQUENCY_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+                {savingField === 'pullFrequencyMinutes' ? (
+                  <Loader2
+                    className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-ink-muted"
+                    aria-hidden
+                  />
+                ) : (
+                  <ChevronDown
+                    className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-muted"
+                    aria-hidden
+                  />
+                )}
+              </div>
+              {!status.scheduledPullEnabled && (
+                <p className="mt-3 text-xs text-ink-muted">
+                  Changes made in Zoho Books also arrive through the Real-time Webhooks below,
+                  within seconds.
                 </p>
-              ) : (
-                <>
-                  <p className="mt-1 text-sm text-ink-muted">
-                    How often this brand pulls data and pushes invoices/payments to Zoho Books.
-                  </p>
-                  <div className="relative mt-4">
-                    <select
-                      aria-label="Sync frequency"
-                      value={status.pullFrequencyMinutes}
-                      disabled={!canWrite || savingField === 'pullFrequencyMinutes'}
-                      onChange={(event) => {
-                        const value = Number(event.target.value) as 1 | 15 | 60 | 1440;
-                        void saveSetting(
-                          'pullFrequencyMinutes',
-                          { pullFrequencyMinutes: value },
-                          { pullFrequencyMinutes: value },
-                        );
-                      }}
-                      className="w-full appearance-none rounded-[10px] border border-border bg-white px-4 py-3 pr-10 text-base text-ink-strong disabled:opacity-60"
-                    >
-                      {FREQUENCY_OPTIONS.map((opt) => (
-                        <option key={opt.value} value={opt.value}>
-                          {opt.label}
-                        </option>
-                      ))}
-                    </select>
-                    {savingField === 'pullFrequencyMinutes' ? (
-                      <Loader2
-                        className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-ink-muted"
-                        aria-hidden
-                      />
-                    ) : (
-                      <ChevronDown
-                        className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-muted"
-                        aria-hidden
-                      />
-                    )}
-                  </div>
-                </>
               )}
             </section>
 

@@ -6,11 +6,11 @@ import {
   ChevronDown,
   ChevronUp,
   CreditCard,
-  ExternalLink,
   FileCheck2,
   Landmark,
   Monitor,
   Smartphone,
+  Upload,
   Wallet,
 } from 'lucide-react';
 import type { Brand, PaymentPageDisplaySettings, PaymentPageLayout } from '@/lib/api';
@@ -22,12 +22,13 @@ import { SaveBar } from './save-bar';
 const initialState: PaymentPageDisplayState = {};
 
 /**
- * What this panel previews. Built server-side in page.tsx from the brand's
- * actual most recent invoice — never invented here — so this settings screen
- * cannot show a number, customer or "paid" state that does not exist. `null`
- * means the brand has no invoices yet; the preview then falls back to
- * SAMPLE_PREVIEW below, clearly labelled as a sample, so there is still
- * something to style-check before a real invoice exists.
+ * What the Email Receipt tab's preview shows — built server-side in page.tsx
+ * from the brand's actual most recent invoice, never invented, so that
+ * settings screen cannot show a number, customer or "paid" state that does
+ * not exist. This Payment Page editor does NOT use this type at all: it is a
+ * layout/design preview only, with no invoice summary of any kind — real,
+ * sample, or otherwise. Real invoice, customer and transaction records live
+ * in the Invoices section, never here.
  */
 export interface PaymentPagePreviewInvoice {
   number: string;
@@ -40,26 +41,12 @@ export interface PaymentPagePreviewInvoice {
   settledLabel: string | null;
   /** The hosted payment page itself — what the emailed "View & Pay Invoice"
    * button opens. Null when the invoice is still a draft: there is no public
-   * link yet. Read by the Email Receipt editor's preview, not by this one. */
+   * link yet. */
   viewUrl: string | null;
   /** The invoice document one level down, behind the payment page's own
-   * "View Invoice" action — which is the link this preview draws. Null
-   * for a draft, for the same reason. */
+   * "View Invoice" action. Null for a draft, for the same reason. */
   invoiceUrl: string | null;
 }
-
-/** Shown only when a brand has no invoices yet. Always paired with the
- * "Sample" badge below, which is what makes reusing the reference mockup's
- * own numbers safe here — it reads as a styled example, not a real invoice. */
-const SAMPLE_PREVIEW: Omit<
-  PaymentPagePreviewInvoice,
-  'isSettled' | 'settledLabel' | 'viewUrl' | 'invoiceUrl'
-> = {
-  number: 'INV-3021',
-  customerName: 'Harborline Distributors',
-  amountLabel: '$4,820.00',
-  dueDateLabel: 'Aug 26, 2026',
-};
 
 const LAYOUTS: readonly { key: PaymentPageLayout; title: string; description: string }[] = [
   { key: 'BANNER', title: 'Banner', description: 'Full-width brand banner with logo and name' },
@@ -157,98 +144,45 @@ function ColourField({
   );
 }
 
-/** The invoice summary block shown inside the preview — same content in
- * every layout, laid out differently per layout. Renders the brand's actual
- * most recent invoice; a brand with none yet gets a placeholder that says so
- * rather than an invented number. */
-function InvoiceSummary({
-  invoice,
+/** Stands in for the invoice summary block in the preview — same position in
+ * every layout, laid out differently per layout. Shows the same fields a real
+ * invoice summary would (number, amount, due date), but every value is a
+ * fixed zero/placeholder — never a real or sample-but-real-looking invoice,
+ * and never any customer name at all (customer data has no place in a layout
+ * preview). Real invoice, customer and transaction records live in the
+ * Invoices section, never here. */
+function InvoiceSummaryPlaceholder({
   centered,
   light,
 }: {
-  invoice: PaymentPagePreviewInvoice | null;
   centered?: boolean;
   /** Renders white-on-colour instead of dark-on-white — for the Split
    * layout's full-bleed brand-colour panel, where the default dark/blue/orange
    * palette would be unreadable against a saturated background. */
   light?: boolean;
 }) {
-  // No invoice yet: fall back to SAMPLE_PREVIEW so there's still a full page
-  // to style-check, but badge and caption it clearly — this must never read
-  // as a real invoice (see PaymentPagePreviewInvoice's comment).
-  const isSample = !invoice;
-  const data = invoice ?? SAMPLE_PREVIEW;
-
-  const sampleBadge = isSample && (
-    <span
-      className={`ml-2 rounded-full px-2 py-0.5 align-middle text-[11px] font-semibold uppercase tracking-wide ${
-        light ? 'bg-white/20 text-white' : 'bg-surface-muted text-ink-subtle'
-      }`}
-    >
-      Sample
-    </span>
-  );
-
-  const viewInvoiceButton = invoice?.invoiceUrl && (
-    <a
-      href={invoice.invoiceUrl}
-      target="_blank"
-      rel="noreferrer"
-      className={`inline-flex shrink-0 items-center gap-1 rounded-md border font-semibold ${
-        light
-          ? 'border-white bg-transparent px-4 py-2 text-sm text-white hover:bg-white/10'
-          : 'border-blue-600 bg-white py-[7px] pl-[10px] pr-2 text-xs text-blue-600 hover:bg-blue-50'
-      }`}
-    >
-      View Invoice
-      <ExternalLink className={light ? 'h-4 w-4' : 'h-3 w-3'} aria-hidden />
-    </a>
-  );
-
   return (
-    <div className={`relative ${centered ? 'text-center' : ''}`}>
-      {!light && !centered && viewInvoiceButton && (
-        <div className="absolute right-0 top-0">{viewInvoiceButton}</div>
-      )}
-      {light ? (
-        <p className="text-base font-bold leading-snug text-white">
-          <span className="block">Invoice {data.number}</span>
-          <span className="block">
-            {data.customerName}
-            {sampleBadge}
-          </span>
-        </p>
-      ) : (
-        <p className={`text-sm text-ink-muted ${centered ? '' : 'pr-28'}`}>
-          Invoice {data.number} &bull; {data.customerName}
-          {sampleBadge}
-        </p>
-      )}
+    <div className={centered ? 'text-center' : ''}>
+      <p
+        className={`text-sm ${light ? 'font-bold text-white' : 'text-ink-muted'} ${centered ? '' : ''}`}
+      >
+        Invoice #0
+      </p>
       <p
         className={`${light ? 'mt-2' : 'mt-1'} text-3xl font-bold ${light ? 'text-white' : 'text-ink-strong'}`}
       >
-        {data.amountLabel}
+        $0.00
       </p>
       <div
-        className={`flex text-sm ${light ? 'mt-4 gap-4' : 'mt-2 gap-3'} ${light ? 'text-white' : 'text-ink-muted'} ${
-          light ? 'font-bold' : ''
-        } ${centered ? 'flex-col items-center' : light ? 'flex-col items-start' : 'items-center justify-between'}`}
+        className={`flex text-sm ${light ? 'mt-4' : 'mt-2'} ${light ? 'text-white font-bold' : 'text-ink-muted'} ${
+          centered ? 'justify-center' : ''
+        }`}
       >
         <span>
           <span className={light ? undefined : 'font-semibold text-ink-strong'}>Due Date:</span>{' '}
-          <span className={light ? undefined : 'font-semibold text-orange-600'}>
-            {data.dueDateLabel}
-          </span>
+          <span className={light ? undefined : 'font-semibold text-orange-600'}>0</span>
         </span>
-        {(centered || light) && viewInvoiceButton}
       </div>
-      {isSample && (
-        <p
-          className={`mt-2 text-xs ${light ? 'text-white/70' : 'text-ink-subtle'} ${centered ? 'text-center' : ''}`}
-        >
-          Sample data — create an invoice for this brand to preview your real numbers here.
-        </p>
-      )}
     </div>
   );
 }
@@ -320,26 +254,68 @@ function CardDetailsForm() {
   );
 }
 
-function PayButton({ accentColor, amountLabel }: { accentColor: string; amountLabel: string }) {
+/** A dropzone tile for Front/Back of check — purely decorative here (no file
+ * picker wired up, same as CardDetailsForm's plain inputs above): this is a
+ * layout/design preview, not the real upload flow. */
+function CheckImageDropzone({ label }: { label: string }) {
+  return (
+    <label className="block">
+      <span className="mb-1 block text-xs font-medium text-ink-muted">{label}</span>
+      <div
+        className="flex h-28 flex-col items-center justify-center gap-1 rounded-lg border
+                   border-dashed border-[#D1D5DB] bg-surface-muted px-2 text-center"
+      >
+        <Upload className="h-4 w-4 text-ink-muted" aria-hidden />
+        <span className="text-xs font-semibold text-ink-strong">Upload {label.toLowerCase()}</span>
+        <span className="text-[11px] text-ink-subtle">PNG, JPG up to 10MB</span>
+      </div>
+    </label>
+  );
+}
+
+/** The "Upload Check" method's own screen — mirrors the real hosted payment
+ * page's check-upload flow structurally (front/back photos, an optional
+ * note, its own submit action) so the layout preview shows what customers
+ * who choose this method actually see. Every field here is static and
+ * unpopulated — no real or sample check, invoice, or customer data, same
+ * rule as the rest of this editor. */
+function CheckUploadPreview({ accentColor }: { accentColor: string }) {
+  return (
+    <div className="mt-5">
+      <p className="text-sm font-bold text-ink-strong">Upload Check</p>
+      <p className="mt-1 text-xs text-ink-muted">
+        Ensure the check is flat, well-lit, and all four corners are visible.
+      </p>
+      <div className="mt-3 grid grid-cols-2 gap-3">
+        <CheckImageDropzone label="Front of check" />
+        <CheckImageDropzone label="Back of check" />
+      </div>
+      <label className="mt-3 block">
+        <span className="mb-1 block text-xs font-medium text-ink-muted">Notes (Optional)</span>
+        <input placeholder="e.g. Reference note for this check" className={inputClass} />
+      </label>
+      <button
+        type="button"
+        style={{ backgroundColor: accentColor }}
+        className="mt-5 w-full rounded-lg py-3 text-sm font-bold text-white transition-opacity hover:opacity-90"
+      >
+        Submit Check for Review
+      </button>
+    </div>
+  );
+}
+
+/** Always "Pay $0.00" — matches InvoiceSummaryPlaceholder's fixed zero
+ * amount, never a real or sample-but-real-looking invoice total. */
+function PayButton({ accentColor }: { accentColor: string }) {
   return (
     <button
       type="button"
       style={{ backgroundColor: accentColor }}
       className="mt-5 w-full rounded-lg py-3 text-sm font-bold text-white transition-opacity hover:opacity-90"
     >
-      Pay {amountLabel}
+      Pay $0.00
     </button>
-  );
-}
-
-/** What the real hosted payment page shows instead of a payment form once an
- * invoice is settled (src/app/pay mirrors this with its own TERMINAL_STATUSES
- * check) — a paid or cancelled invoice never offers a "choose how to pay" form. */
-function SettledNotice({ label }: { label: string }) {
-  return (
-    <p className="mt-5 rounded-lg border border-[#E5E7EB] bg-surface-muted px-4 py-6 text-center text-sm font-medium text-ink-strong">
-      {label}
-    </p>
   );
 }
 
@@ -422,7 +398,6 @@ function PreviewBody({
   logoSrc,
   method,
   onMethodChange,
-  invoice,
 }: {
   brand: Brand;
   themeColor: string;
@@ -432,27 +407,29 @@ function PreviewBody({
   logoSrc: string | null;
   method: MethodKey;
   onMethodChange: (key: MethodKey) => void;
-  invoice: PaymentPagePreviewInvoice | null;
 }) {
-  // A settled (paid/cancelled) invoice, or none at all, gets no payment
-  // form — same rule the real hosted payment page enforces server-side.
-  const paymentForm = invoice?.isSettled ? (
-    <SettledNotice label={invoice.settledLabel ?? 'This invoice has been paid.'} />
-  ) : (
+  const paymentForm = (
     <>
       <MethodGrid selected={method} onSelect={onMethodChange} accentColor={accentColor} />
       {method === 'card' ? (
-        <CardDetailsForm />
+        <>
+          <CardDetailsForm />
+          <PayButton accentColor={accentColor} />
+        </>
+      ) : method === 'check' ? (
+        // The check method submits itself ("Submit Check for Review") rather
+        // than the generic PayButton below — same split the real hosted
+        // payment page's own CheckUploadForm makes.
+        <CheckUploadPreview accentColor={accentColor} />
       ) : (
-        <p className="mt-5 rounded-lg border border-dashed border-[#E5E7EB] bg-surface-muted px-4 py-6 text-center text-sm text-ink-muted">
-          You will be redirected to complete payment via{' '}
-          {METHODS.find((m) => m.key === method)?.label}.
-        </p>
+        <>
+          <p className="mt-5 rounded-lg border border-dashed border-[#E5E7EB] bg-surface-muted px-4 py-6 text-center text-sm text-ink-muted">
+            You will be redirected to complete payment via{' '}
+            {METHODS.find((m) => m.key === method)?.label}.
+          </p>
+          <PayButton accentColor={accentColor} />
+        </>
       )}
-      <PayButton
-        accentColor={accentColor}
-        amountLabel={invoice?.amountLabel ?? SAMPLE_PREVIEW.amountLabel}
-      />
     </>
   );
 
@@ -471,7 +448,7 @@ function PreviewBody({
             </span>
             <span className="text-lg font-bold text-white">{brand.displayName}</span>
           </div>
-          <InvoiceSummary invoice={invoice} light />
+          <InvoiceSummaryPlaceholder light />
         </div>
         <div className="p-6">{paymentForm}</div>
       </div>
@@ -486,7 +463,7 @@ function PreviewBody({
         <CenteredHeader brand={brand} themeColor={themeColor} logoSrc={logoSrc} />
       )}
       <div className="p-6">
-        <InvoiceSummary invoice={invoice} centered={layout === 'CENTERED'} />
+        <InvoiceSummaryPlaceholder centered={layout === 'CENTERED'} />
         <div className="my-6 border-t border-[#E5E7EB]" />
         {paymentForm}
       </div>
@@ -498,14 +475,10 @@ export function PaymentPageEditor({
   brand,
   activeSub,
   display,
-  previewInvoice,
 }: {
   brand: Brand;
   activeSub: BrandingSubTab;
   display: PaymentPageDisplaySettings;
-  /** The brand's actual most recent invoice, or null if it has none yet —
-   * see PaymentPagePreviewInvoice. Never fabricated. */
-  previewInvoice: PaymentPagePreviewInvoice | null;
 }) {
   const action = savePaymentPageDisplayAction.bind(null, brand);
   const [state, formAction, pending] = useActionState(action, initialState);
@@ -756,7 +729,6 @@ export function PaymentPageEditor({
               logoSrc={logoSrc}
               method={method}
               onMethodChange={setMethod}
-              invoice={previewInvoice}
             />
           </div>
         </section>

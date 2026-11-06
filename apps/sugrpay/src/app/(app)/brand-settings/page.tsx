@@ -111,10 +111,12 @@ const PAYMENT_PUBLIC_URL =
 // Same convention as the Invoices detail drawer's "Download PDF" button.
 
 /**
- * What the Payment Page tab's preview shows: this brand's actual most recent
+ * What the Email Receipt tab's preview shows: this brand's actual most recent
  * invoice, never an invented one (FR-PAY design note — the reference mockup's
  * example numbers must not leak into a real settings screen). `null` when the
  * brand has no invoices yet; the preview then says so instead of faking one.
+ * The Payment Page tab is layout/design only and never calls this — it always
+ * renders its static sample preview instead.
  */
 async function loadPreviewInvoice(brandId: string): Promise<PaymentPagePreviewInvoice | null> {
   let latest;
@@ -305,7 +307,6 @@ export default async function BrandSettingsPage({
   // instead of the sum of all of them.
   let paymentPageProps: {
     display: PaymentPageDisplaySettings;
-    previewInvoice: PaymentPagePreviewInvoice | null;
   } | null = null;
   let emailReceiptProps: {
     settings: EmailReceiptSettings;
@@ -377,11 +378,11 @@ export default async function BrandSettingsPage({
     activeTab !== 'payments'
   ) {
     if (activeSub === 'payment-page') {
-      const [display, previewInvoice] = await Promise.all([
-        getPaymentPageDisplaySettings(brand.id),
-        loadPreviewInvoice(brand.id),
-      ]);
-      paymentPageProps = { display, previewInvoice };
+      // Layout/design settings only — this tab must never surface a real
+      // invoice, customer, or transaction record (those live in the
+      // Invoices section), so no preview-invoice data is fetched for it.
+      const display = await getPaymentPageDisplaySettings(brand.id);
+      paymentPageProps = { display };
     } else if (activeSub === 'email-receipt') {
       // The accent colour comes back on the email-receipt response itself —
       // it is part of every branding section's shape now, so there is no
@@ -528,7 +529,6 @@ export default async function BrandSettingsPage({
               brand={brand}
               activeSub={activeSub}
               display={paymentPageProps!.display}
-              previewInvoice={paymentPageProps!.previewInvoice}
             />
           ) : activeSub === 'email-receipt' ? (
             <EmailReceiptEditor
