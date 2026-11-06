@@ -202,8 +202,8 @@ export function CheckReviewDrawer({
               <div className="mt-3 grid grid-cols-2 gap-4">
                 {(
                   [
-                    { label: 'Front', url: detail.frontImageUrl },
-                    { label: 'Back', url: detail.backImageUrl },
+                    { label: 'Front', url: checkImageSrc(brandId, detail.id, 'front') },
+                    { label: 'Back', url: checkImageSrc(brandId, detail.id, 'back') },
                   ] as const
                 ).map((side) => (
                   <div key={side.label}>
@@ -345,7 +345,11 @@ export function CheckReviewDrawer({
               </div>
               <div className="flex flex-1 items-center justify-center bg-black p-10">
                 <img
-                  src={previewSide === 'Front' ? detail.frontImageUrl : detail.backImageUrl}
+                  src={checkImageSrc(
+                    brandId,
+                    detail.id,
+                    previewSide === 'Front' ? 'front' : 'back',
+                  )}
                   alt={`${previewSide} of check ${detail.checkNumber}, full size`}
                   className="max-h-[60vh] max-w-full rounded-lg object-contain shadow-lg"
                 />
@@ -357,4 +361,12 @@ export function CheckReviewDrawer({
     </div>,
     document.body,
   );
+}
+
+/** Where the drawer loads a check photo: the website's signed-in route, which
+ * asks the API to decrypt it. The photos are stored encrypted, so there is no
+ * storage link to load them from. */
+function checkImageSrc(brandId: string, checkId: string, side: 'front' | 'back'): string {
+  const query = new URLSearchParams({ brandId, id: checkId, side });
+  return `/payments/checks/image?${query.toString()}`;
 }
