@@ -2,8 +2,7 @@
 
 import { redirect } from 'next/navigation';
 import { emailSchema } from '@platform/kernel';
-import { ApiError, getOnboarding, login } from '@/accounts/lib/api';
-import { AWAITING_SETUP_PATH, isCompanyAdmin, routeForStep } from '@/accounts/lib/onboarding';
+import { ApiError, login } from '@/accounts/lib/api';
 import { safeReturnPath, writeSessionToken } from '@/accounts/lib/session';
 
 export interface LoginState {
@@ -75,31 +74,5 @@ export async function loginAction(_prevState: LoginState, formData: FormData): P
   if (result.user.mustResetPassword) {
     redirect(`/accounts/set-password?next=${encodeURIComponent(returnTo)}`);
   }
-  redirect(await destinationAfterSignIn(result.token, result.user, returnTo));
-}
-
-/**
- * Sign In continues from where the company's onboarding stands: the first
- * step not yet done (Register Your Company, Add Your Brand, Select Your
- * Products). Once onboarding is complete, Select Your Products is where
- * signing in lands, unless the user was sent here from a page they were
- * trying to open (a ?next= link), which they go back to.
- */
-async function destinationAfterSignIn(
-  token: string,
-  user: { role: Parameters<typeof isCompanyAdmin>[0]['role'] },
-  returnTo: string,
-): Promise<string> {
-  let onboarding;
-  try {
-    onboarding = await getOnboarding(token);
-  } catch {
-    // Not knowing the step must not lose the sign-in: the pages' own guards
-    // send the user to the right step.
-    return returnTo;
-  }
-  if (!onboarding.onboardingComplete) {
-    return isCompanyAdmin(user) ? routeForStep(onboarding.nextStep) : AWAITING_SETUP_PATH;
-  }
-  return returnTo === '/' ? routeForStep('SELECT_PRODUCTS') : returnTo;
+  redirect(returnTo);
 }
